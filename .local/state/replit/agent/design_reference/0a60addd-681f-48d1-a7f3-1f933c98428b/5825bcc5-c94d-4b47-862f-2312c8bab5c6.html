@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmailPro - Professional Email Marketing Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#1E293B',
+                        success: '#10B981',
+                        warning: '#F59E0B',
+                        error: '#EF4444'
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-50 font-sans">
+    <!-- @COMPONENT: TopNavigation -->
+    <nav class="bg-white border-b border-slate-200 h-16 fixed w-full top-0 z-30">
+        <div class="flex items-center justify-between h-full px-6">
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-envelope text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-semibold text-secondary">EmailPro</span>
+                </div>
+                <div class="hidden md:block w-px h-6 bg-slate-300"></div>
+                <button class="md:hidden text-slate-600 hover:text-slate-900">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="hidden md:flex flex-1 max-w-md mx-8">
+                <div class="relative w-full">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-slate-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Search campaigns, contacts...">
+                </div>
+            </div>
+
+            <!-- User Menu -->
+            <div class="flex items-center space-x-4">
+                <button class="relative text-slate-600 hover:text-slate-900">
+                    <i class="fas fa-bell text-xl"></i>
+                    <span class="absolute -top-1 -right-1 w-2 h-2 bg-error rounded-full"></span>
+                </button>
+                
+                <div class="flex items-center space-x-3 cursor-pointer hover:bg-slate-50 rounded-lg px-3 py-2">
+                    <!-- Professional business person avatar -->
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=150&h=150" alt="User avatar" class="w-8 h-8 rounded-full object-cover">
+                    <div class="hidden md:block">
+                        <div class="text-sm font-medium text-slate-900" data-bind="user.name">John Smith</div>
+                        <div class="text-xs text-slate-500" data-bind="user.role">Marketing Manager</div>
+                    </div>
+                    <i class="fas fa-chevron-down text-slate-400 text-xs hidden md:block"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <!-- @END_COMPONENT: TopNavigation -->
+
+    <div class="flex pt-16">
+        <!-- @COMPONENT: Sidebar -->
+        <aside class="w-60 bg-white border-r border-slate-200 h-screen fixed left-0 overflow-y-auto">
+            <nav class="p-4 space-y-2">
+                <!-- Dashboard -->
+                <div class="mb-6">
+                    <a href="#dashboard" class="flex items-center space-x-3 px-3 py-2 rounded-lg bg-primary text-white" data-event="click:navigateToSection">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+
+                <!-- Campaigns Section -->
+                <div class="mb-6">
+                    <div class="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Campaigns</div>
+                    <div class="space-y-1">
+                        <a href="#campaigns" class="flex items-center space-x-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg" data-event="click:navigateToSection">
+                            <i class="fas fa-paper-plane"></i>
+                            <span>All Campaigns</span>
+                            <span class="ml-auto bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-xs" data-bind="campaigns.total">24</span>
+                        </a>
+                        <a href="#campaign-create" class="flex items-center space-x-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg" data-event="click:navigateToSection">
+                            <i class="fas fa-plus"></i>
+                            <span>Create Campaign</span>
+                        </a>
+                        <a href="#templates" class="flex items-center space-x-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg" data-event="click:navigateToSection">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Templates</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Contacts Section -->
+                <div class="mb-6">
+                    <div class="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Contacts</div>
+                    <div class="space-y-1">
+                        <a href="#contacts" class="flex items-center space-x-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg" data-event="click:navigateToSection">
+                            <i class="fas fa-users"></i>
+                            <span>All Contacts</span>
+                            <span class="ml-auto bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-xs" data-bind="contacts.total">12,543</span>
+                        </a>
+                        <a href="#lists" class="flex items-center space-x-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg" data-event="click:navigateToSection">
+                            <i class="fas fa-list"></i>
+                            <span>Lists & Segments</span>
+                        </a>
+                        <a href="#import" class="flex items-center space-x-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg" data-event="click:navigateToSection">
+                            <i class="fas fa-upload"></i>
+                            <span>Import Contacts</span>
+                        </a>
+                        <a href="#suppressions" class="flex items-center space-x-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg" data-event="click:navigateToSection">
+                            <i class="fas fa-ban"></i>
+                            <span>Suppressions</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Analytics Section -->
+                <div class="mb-6">
+                    <div class="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Analytics</div>
+                    <div class="space-y-1">
+                        <a href="#reports" class="flex items-center space-x-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg" data-event="click:navigateToSection">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Reports</span>
+                        </a>
+                        <a href="#tracking" class="flex items-center space-x-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg" data-event="click:navigateToSection">
+                            <i class="fas fa-mouse-pointer"></i>
+                            <span>Click Tracking</span>
+                        </a>
+                        <a href="#deliverability" class="flex items-center space-x-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg" data-event="click:navigateToSection">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Deliverability</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Settings Section -->
+                <div class="mb-6">
+                    <div class="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Settings</div>
+                    <div class="space-y-1">
+                        <a href="#servers" class="flex items-center space-x-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg" data-event="click:navigateToSection">
+                            <i class="fas fa-server"></i>
+                            <span>SMTP Servers</span>
+                        </a>
+                        <a href="#domains" class="flex items-center space-x-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg" data-event="click:navigateToSection">
+                            <i class="fas fa-globe"></i>
+                            <span>Domains</span>
+                        </a>
+                        <a href="#account" class="flex items-center space-x-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg" data-event="click:navigateToSection">
+                            <i class="fas fa-cog"></i>
+                            <span>Account Settings</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+        <!-- @END_COMPONENT: Sidebar -->
+
+        <!-- @COMPONENT: MainContent -->
+        <main class="flex-1 ml-60 p-6 overflow-x-hidden">
+            <!-- Dashboard Overview Section -->
+            <div id="dashboard-section" class="mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-semibold text-slate-900">Dashboard</h1>
+                        <p class="text-slate-600 mt-1">Welcome back! Here's what's happening with your email campaigns.</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button class="px-4 py-2 text-slate-600 hover:text-slate-900 border border-slate-300 rounded-lg hover:bg-slate-50" data-event="click:exportData">
+                            <i class="fas fa-download mr-2"></i>Export
+                        </button>
+                        <button class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600" data-event="click:createCampaign">
+                            <i class="fas fa-plus mr-2"></i>New Campaign
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- Total Campaigns Card -->
+                    <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-600 text-sm mb-1">Total Campaigns</p>
+                                <p class="text-2xl font-semibold text-slate-900" data-bind="stats.totalCampaigns">247</p>
+                                <div class="flex items-center mt-2">
+                                    <span class="text-success text-sm flex items-center">
+                                        <i class="fas fa-arrow-up mr-1"></i>+12%
+                                    </span>
+                                    <span class="text-slate-500 text-sm ml-1">from last month</span>
+                                </div>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-paper-plane text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Open Rate Card -->
+                    <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-600 text-sm mb-1">Average Open Rate</p>
+                                <p class="text-2xl font-semibold text-slate-900" data-bind="stats.openRate">24.3%</p>
+                                <div class="flex items-center mt-2">
+                                    <span class="text-success text-sm flex items-center">
+                                        <i class="fas fa-arrow-up mr-1"></i>+2.1%
+                                    </span>
+                                    <span class="text-slate-500 text-sm ml-1">from last month</span>
+                                </div>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-envelope-open text-success"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Click Rate Card -->
+                    <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-600 text-sm mb-1">Average Click Rate</p>
+                                <p class="text-2xl font-semibold text-slate-900" data-bind="stats.clickRate">3.8%</p>
+                                <div class="flex items-center mt-2">
+                                    <span class="text-error text-sm flex items-center">
+                                        <i class="fas fa-arrow-down mr-1"></i>-0.4%
+                                    </span>
+                                    <span class="text-slate-500 text-sm ml-1">from last month</span>
+                                </div>
+                            </div>
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-mouse-pointer text-warning"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Contacts Card -->
+                    <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-600 text-sm mb-1">Total Contacts</p>
+                                <p class="text-2xl font-semibold text-slate-900" data-bind="stats.totalContacts">85,432</p>
+                                <div class="flex items-center mt-2">
+                                    <span class="text-success text-sm flex items-center">
+                                        <i class="fas fa-arrow-up mr-1"></i>+1,245
+                                    </span>
+                                    <span class="text-slate-500 text-sm ml-1">this month</span>
+                                </div>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-users text-purple-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <!-- Email Performance Chart -->
+                    <div class="bg-white rounded-xl p-6 border border-slate-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-slate-900">Email Performance</h3>
+                            <select class="text-sm border border-slate-300 rounded-lg px-3 py-1 text-slate-600">
+                                <option>Last 7 days</option>
+                                <option>Last 30 days</option>
+                                <option>Last 90 days</option>
+                            </select>
+                        </div>
+                        <canvas id="performanceChart" class="w-full h-64"></canvas>
+                    </div>
+
+                    <!-- Campaign Status Distribution -->
+                    <div class="bg-white rounded-xl p-6 border border-slate-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-slate-900">Campaign Status</h3>
+                        </div>
+                        <canvas id="statusChart" class="w-full h-64"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Campaigns Table -->
+                <div class="bg-white rounded-xl border border-slate-200">
+                    <div class="px-6 py-4 border-b border-slate-200">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-slate-900">Recent Campaigns</h3>
+                            <a href="#campaigns" class="text-primary hover:text-blue-600 text-sm font-medium" data-event="click:viewAllCampaigns">View all campaigns</a>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Campaign</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Recipients</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Open Rate</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Click Rate</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Sent Date</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-slate-200">
+                                <!-- @MAP: campaigns.recent.map(campaign => ( -->
+                                <tr class="hover:bg-slate-50" data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-2 h-2 bg-success rounded-full mr-3"></div>
+                                            <div>
+                                                <div class="text-sm font-medium text-slate-900">Black Friday Sale 2024</div>
+                                                <div class="text-sm text-slate-500">Newsletter Campaign</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-success text-green-800">Sent</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">12,543</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">28.4%</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">4.2%</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">Nov 25, 2024</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button class="text-primary hover:text-blue-600 mr-3" data-event="click:viewCampaign">View</button>
+                                        <button class="text-slate-600 hover:text-slate-900" data-event="click:duplicateCampaign">Duplicate</button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50" data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-2 h-2 bg-warning rounded-full mr-3"></div>
+                                            <div>
+                                                <div class="text-sm font-medium text-slate-900">Holiday Gift Guide</div>
+                                                <div class="text-sm text-slate-500">Promotional Campaign</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Scheduled</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">8,921</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">-</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">-</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">Dec 1, 2024</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button class="text-primary hover:text-blue-600 mr-3" data-event="click:editCampaign">Edit</button>
+                                        <button class="text-error hover:text-red-700" data-event="click:cancelCampaign">Cancel</button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50" data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                                            <div>
+                                                <div class="text-sm font-medium text-slate-900">Welcome Series - Week 1</div>
+                                                <div class="text-sm text-slate-500">Automation Campaign</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Active</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">1,245</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">31.2%</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">5.8%</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">Ongoing</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button class="text-primary hover:text-blue-600 mr-3" data-event="click:viewAutomation">View</button>
+                                        <button class="text-slate-600 hover:text-slate-900" data-event="click:pauseAutomation">Pause</button>
+                                    </td>
+                                </tr>
+                                <!-- @END_MAP )) -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Campaign Creation Section -->
+            <div id="campaign-create-section" class="hidden mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-semibold text-slate-900">Create Campaign</h1>
+                        <p class="text-slate-600 mt-1">Set up a new email marketing campaign.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Campaign Setup Form -->
+                    <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6">
+                        <form class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Campaign Name</label>
+                                    <input type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter campaign name" data-mock="true">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Campaign Type</label>
+                                    <select class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        <option>Newsletter</option>
+                                        <option>Promotional</option>
+                                        <option>Welcome Series</option>
+                                        <option>Follow-up</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Subject Line</label>
+                                <input type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter email subject line" data-mock="true">
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">From Name</label>
+                                    <input type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Your Company" data-mock="true">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">From Email</label>
+                                    <input type="email" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="noreply@company.com" data-mock="true">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Select Recipients</label>
+                                <div class="space-y-2">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary" data-mock="true">
+                                        <span class="ml-2 text-sm text-slate-700">Newsletter Subscribers (12,543 contacts)</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary" data-mock="true">
+                                        <span class="ml-2 text-sm text-slate-700">Premium Users (3,421 contacts)</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary" data-mock="true">
+                                        <span class="ml-2 text-sm text-slate-700">Recent Customers (8,765 contacts)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Email Template Builder Preview -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Email Content</label>
+                                <div class="border border-slate-300 rounded-lg">
+                                    <div class="flex items-center justify-between p-3 border-b border-slate-300 bg-slate-50">
+                                        <div class="flex items-center space-x-2">
+                                            <button class="px-3 py-1 text-sm bg-white border border-slate-300 rounded" data-event="click:switchToVisual">Visual</button>
+                                            <button class="px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 rounded" data-event="click:switchToHTML">HTML</button>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <button class="text-slate-600 hover:text-slate-900" data-event="click:previewEmail"><i class="fas fa-eye"></i></button>
+                                            <button class="text-slate-600 hover:text-slate-900" data-event="click:saveTemplate"><i class="fas fa-save"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="p-4 bg-white min-h-[300px]">
+                                        <!-- Email Template Preview -->
+                                        <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center" data-mock="true">
+                                            <i class="fas fa-plus-circle text-4xl text-slate-400 mb-4"></i>
+                                            <p class="text-slate-600">Drag and drop elements here or choose a template</p>
+                                            <button class="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600" data-event="click:chooseTemplate">Choose Template</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between pt-4 border-t border-slate-200">
+                                <button type="button" class="px-4 py-2 text-slate-600 hover:text-slate-900" data-event="click:saveDraft">Save as Draft</button>
+                                <div class="space-x-3">
+                                    <button type="button" class="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50" data-event="click:previewAndTest">Preview & Test</button>
+                                    <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600" data-event="click:sendCampaign">Send Campaign</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Campaign Settings Sidebar -->
+                    <div class="space-y-6">
+                        <!-- Send Settings -->
+                        <div class="bg-white rounded-xl border border-slate-200 p-6">
+                            <h3 class="text-lg font-semibold text-slate-900 mb-4">Send Settings</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="send_time" class="text-primary focus:ring-primary" checked data-mock="true">
+                                        <span class="ml-2 text-sm text-slate-700">Send immediately</span>
+                                    </label>
+                                </div>
+                                <div>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="send_time" class="text-primary focus:ring-primary" data-mock="true">
+                                        <span class="ml-2 text-sm text-slate-700">Schedule for later</span>
+                                    </label>
+                                    <div class="mt-2 ml-6 space-y-2">
+                                        <input type="datetime-local" class="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" data-mock="true">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tracking Settings -->
+                        <div class="bg-white rounded-xl border border-slate-200 p-6">
+                            <h3 class="text-lg font-semibold text-slate-900 mb-4">Tracking</h3>
+                            <div class="space-y-3">
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary" checked data-mock="true">
+                                    <span class="ml-2 text-sm text-slate-700">Track opens</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary" checked data-mock="true">
+                                    <span class="ml-2 text-sm text-slate-700">Track clicks</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary" data-mock="true">
+                                    <span class="ml-2 text-sm text-slate-700">Track unsubscribes</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary" data-mock="true">
+                                    <span class="ml-2 text-sm text-slate-700">Track bounces</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- A/B Testing -->
+                        <div class="bg-white rounded-xl border border-slate-200 p-6">
+                            <h3 class="text-lg font-semibold text-slate-900 mb-4">A/B Testing</h3>
+                            <label class="flex items-center mb-3">
+                                <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary" data-mock="true">
+                                <span class="ml-2 text-sm text-slate-700">Enable A/B testing</span>
+                            </label>
+                            <div class="text-sm text-slate-500">
+                                Test subject lines, send times, or content variations to optimize performance.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contacts Management Section -->
+            <div id="contacts-section" class="hidden mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-semibold text-slate-900">Contacts</h1>
+                        <p class="text-slate-600 mt-1">Manage your subscriber lists and contacts.</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button class="px-4 py-2 text-slate-600 hover:text-slate-900 border border-slate-300 rounded-lg hover:bg-slate-50" data-event="click:exportContacts">
+                            <i class="fas fa-download mr-2"></i>Export
+                        </button>
+                        <button class="px-4 py-2 text-slate-600 hover:text-slate-900 border border-slate-300 rounded-lg hover:bg-slate-50" data-event="click:importContacts">
+                            <i class="fas fa-upload mr-2"></i>Import
+                        </button>
+                        <button class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600" data-event="click:addContact">
+                            <i class="fas fa-plus mr-2"></i>Add Contact
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Contact Lists Overview -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white rounded-xl p-6 border border-slate-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-lg font-semibold text-slate-900">Total Contacts</h3>
+                            <i class="fas fa-users text-primary"></i>
+                        </div>
+                        <p class="text-3xl font-bold text-slate-900" data-bind="contacts.total">85,432</p>
+                        <p class="text-sm text-slate-500 mt-1">+1,245 this month</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 border border-slate-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-lg font-semibold text-slate-900">Active Subscribers</h3>
+                            <i class="fas fa-check-circle text-success"></i>
+                        </div>
+                        <p class="text-3xl font-bold text-slate-900" data-bind="contacts.active">81,203</p>
+                        <p class="text-sm text-slate-500 mt-1">95.1% of total</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 border border-slate-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-lg font-semibold text-slate-900">Unsubscribed</h3>
+                            <i class="fas fa-user-minus text-error"></i>
+                        </div>
+                        <p class="text-3xl font-bold text-slate-900" data-bind="contacts.unsubscribed">4,229</p>
+                        <p class="text-sm text-slate-500 mt-1">4.9% of total</p>
+                    </div>
+                </div>
+
+                <!-- Contacts Table -->
+                <div class="bg-white rounded-xl border border-slate-200">
+                    <div class="px-6 py-4 border-b border-slate-200">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-slate-900">All Contacts</h3>
+                            <div class="flex items-center space-x-4">
+                                <div class="relative">
+                                    <input type="text" class="pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Search contacts...">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-search text-slate-400"></i>
+                                    </div>
+                                </div>
+                                <select class="border border-slate-300 rounded-lg px-3 py-2 text-slate-600">
+                                    <option>All Lists</option>
+                                    <option>Newsletter Subscribers</option>
+                                    <option>Premium Users</option>
+                                    <option>Recent Customers</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left">
+                                        <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary" data-mock="true">
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Contact</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Lists</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Engagement</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Joined</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-slate-200">
+                                <!-- @MAP: contacts.list.map(contact => ( -->
+                                <tr class="hover:bg-slate-50" data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary">
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <!-- Professional business person avatar -->
+                                            <img src="https://pixabay.com/get/g8bc33c7e0f7e067e490a5cda746d9fce1d2b0f016cb20cad44f3a840877220c3843704d7bc900ff7ec22329ba1f9ccc0b5ebb2ff60a7215d49340fa88da4cf17_1280.jpg" alt="Contact avatar" class="w-8 h-8 rounded-full object-cover mr-3">
+                                            <div>
+                                                <div class="text-sm font-medium text-slate-900">Sarah Johnson</div>
+                                                <div class="text-sm text-slate-500">sarah.johnson@email.com</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex flex-wrap gap-1">
+                                            <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">Newsletter</span>
+                                            <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">Premium</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-success text-green-800">Active</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-slate-900">High</div>
+                                        <div class="text-xs text-slate-500">92% open rate</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">Jan 15, 2024</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button class="text-primary hover:text-blue-600 mr-3" data-event="click:editContact">Edit</button>
+                                        <button class="text-error hover:text-red-700" data-event="click:removeContact">Remove</button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50" data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary">
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <!-- Professional business person avatar -->
+                                            <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=150&h=150" alt="Contact avatar" class="w-8 h-8 rounded-full object-cover mr-3">
+                                            <div>
+                                                <div class="text-sm font-medium text-slate-900">Michael Chen</div>
+                                                <div class="text-sm text-slate-500">michael.chen@email.com</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex flex-wrap gap-1">
+                                            <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">Newsletter</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-success text-green-800">Active</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-slate-900">Medium</div>
+                                        <div class="text-xs text-slate-500">67% open rate</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">Mar 3, 2024</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button class="text-primary hover:text-blue-600 mr-3" data-event="click:editContact">Edit</button>
+                                        <button class="text-error hover:text-red-700" data-event="click:removeContact">Remove</button>
+                                    </td>
+                                </tr>
+                                <!-- @END_MAP )) -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-200">
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-slate-700">
+                                Showing <span class="font-medium">1</span> to <span class="font-medium">10</span> of <span class="font-medium">85,432</span> contacts
+                            </div>
+                            <div class="flex space-x-1">
+                                <button class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-white" data-event="click:previousPage">Previous</button>
+                                <button class="px-3 py-1 text-sm bg-primary text-white rounded" data-mock="true">1</button>
+                                <button class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-white" data-mock="true">2</button>
+                                <button class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-white" data-mock="true">3</button>
+                                <button class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-white" data-event="click:nextPage">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <!-- @END_COMPONENT: MainContent -->
+    </div>
+
+    <!-- Modals and Scripts -->
+    <script>
+        (function() {
+            // TODO: Implement business logic, API calls, and state management
+            
+            // Chart initialization
+            const performanceCtx = document.getElementById('performanceChart');
+            if (performanceCtx) {
+                new Chart(performanceCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Opens',
+                            data: [120, 190, 300, 500, 200, 300, 450],
+                            borderColor: '#3B82F6',
+                            backgroundColor: '#3B82F6',
+                            fill: false,
+                            tension: 0.4
+                        }, {
+                            label: 'Clicks',
+                            data: [20, 30, 45, 75, 35, 50, 80],
+                            borderColor: '#10B981',
+                            backgroundColor: '#10B981',
+                            fill: false,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            const statusCtx = document.getElementById('statusChart');
+            if (statusCtx) {
+                new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Sent', 'Scheduled', 'Draft', 'Active'],
+                        datasets: [{
+                            data: [15, 3, 8, 2],
+                            backgroundColor: ['#10B981', '#F59E0B', '#6B7280', '#3B82F6']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+
+            // Navigation handling
+            document.addEventListener('click', function(e) {
+                const target = e.target.closest('[data-event]');
+                if (target) {
+                    const event = target.getAttribute('data-event');
+                    console.log('Event triggered:', event);
+                    // TODO: Handle navigation and actions
+                }
+            });
+
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,300 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(210 25% 7.8431%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(210 25% 7.8431%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(210 25% 7.8431%);
+  --primary: hsl(214 100% 59%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 25% 7.8431%);
+  --secondary-foreground: hsl(0 0% 100%);
+  --muted: hsl(210 40% 98%);
+  --muted-foreground: hsl(215 16% 46.9%);
+  --accent: hsl(210 40% 98%);
+  --accent-foreground: hsl(214 100% 59%);
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(214 32% 91%);
+  --input: hsl(214 32% 91%);
+  --ring: hsl(214 100% 59%);
+  --success: hsl(142 71% 45%);
+  --success-foreground: hsl(0 0% 100%);
+  --warning: hsl(38 92% 50%);
+  --warning-foreground: hsl(0 0% 100%);
+  --chart-1: hsl(214 100% 59%);
+  --chart-2: hsl(142 71% 45%);
+  --chart-3: hsl(38 92% 50%);
+  --chart-4: hsl(147 78% 42%);
+  --chart-5: hsl(341 75% 51%);
+  --sidebar: hsl(0 0% 100%);
+  --sidebar-foreground: hsl(210 25% 7.8431%);
+  --sidebar-primary: hsl(214 100% 59%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(210 40% 98%);
+  --sidebar-accent-foreground: hsl(214 100% 59%);
+  --sidebar-border: hsl(214 32% 91%);
+  --sidebar-ring: hsl(214 100% 59%);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: hsl(222 84% 5%);
+  --foreground: hsl(210 40% 98%);
+  --card: hsl(222 84% 5%);
+  --card-foreground: hsl(210 40% 98%);
+  --popover: hsl(222 84% 5%);
+  --popover-foreground: hsl(210 40% 98%);
+  --primary: hsl(217 91% 60%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(217 32% 17%);
+  --secondary-foreground: hsl(210 40% 98%);
+  --muted: hsl(217 32% 17%);
+  --muted-foreground: hsl(215 20% 65%);
+  --accent: hsl(217 32% 17%);
+  --accent-foreground: hsl(210 40% 98%);
+  --destructive: hsl(0 62% 30%);
+  --destructive-foreground: hsl(0 85% 97%);
+  --border: hsl(217 32% 17%);
+  --input: hsl(217 32% 17%);
+  --ring: hsl(224 71% 4%);
+  --success: hsl(142 71% 45%);
+  --success-foreground: hsl(0 0% 100%);
+  --warning: hsl(38 92% 50%);
+  --warning-foreground: hsl(0 0% 100%);
+  --chart-1: hsl(220 70% 50%);
+  --chart-2: hsl(160 60% 45%);
+  --chart-3: hsl(30 80% 55%);
+  --chart-4: hsl(280 65% 60%);
+  --chart-5: hsl(340 75% 55%);
+  --sidebar: hsl(222 84% 5%);
+  --sidebar-foreground: hsl(210 40% 98%);
+  --sidebar-primary: hsl(217 91% 60%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(217 32% 17%);
+  --sidebar-accent-foreground: hsl(210 40% 98%);
+  --sidebar-border: hsl(217 32% 17%);
+  --sidebar-ring: hsl(217 91% 60%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Custom email marketing specific styles */
+.email-preview {
+  @apply bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm;
+}
+
+.stats-card-gradient {
+  background: linear-gradient(135deg, var(--primary) 0%, hsl(from var(--primary) h s calc(l - 10%)) 100%);
+}
+
+.campaign-status-active {
+  @apply bg-green-100 text-green-800;
+}
+
+.campaign-status-draft {
+  @apply bg-gray-100 text-gray-800;
+}
+
+.campaign-status-scheduled {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.campaign-status-sent {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.campaign-status-paused {
+  @apply bg-orange-100 text-orange-800;
+}
+
+.campaign-status-cancelled {
+  @apply bg-red-100 text-red-800;
+}
+
+/* Email template builder styles */
+.email-builder-toolbar {
+  @apply bg-slate-50 border-r border-slate-200 p-4;
+}
+
+.email-builder-canvas {
+  @apply bg-white p-4 min-h-96;
+}
+
+.email-element {
+  @apply border-2 border-transparent hover:border-primary hover:border-opacity-50 cursor-pointer transition-colors;
+}
+
+.email-element.selected {
+  @apply border-primary;
+}
+
+/* Analytics chart styles */
+.analytics-chart {
+  @apply w-full h-64;
+}
+
+/* Navigation styles */
+.nav-link {
+  @apply flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-slate-700 hover:bg-slate-100;
+}
+
+.nav-link.active {
+  @apply bg-primary text-white;
+}
+
+/* Form styles */
+.form-field {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply text-sm font-medium text-slate-700;
+}
+
+.form-input {
+  @apply w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+}
+
+.form-error {
+  @apply text-sm text-red-600;
+}
+
+/* Server status indicators */
+.server-status-active {
+  @apply bg-green-100 text-green-800;
+}
+
+.server-status-inactive {
+  @apply bg-gray-100 text-gray-800;
+}
+
+.server-status-error {
+  @apply bg-red-100 text-red-800;
+}
+
+/* Contact status indicators */
+.contact-status-active {
+  @apply bg-green-100 text-green-800;
+}
+
+.contact-status-unsubscribed {
+  @apply bg-red-100 text-red-800;
+}
+
+.contact-status-bounced {
+  @apply bg-orange-100 text-orange-800;
+}
+
+.contact-status-complained {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+/* Loading states */
+.loading-spinner {
+  @apply animate-spin rounded-full h-8 w-8 border-b-2 border-primary;
+}
+
+.skeleton {
+  @apply animate-pulse bg-slate-200 rounded;
+}
+
+/* Hover effects for cards */
+.hover-card {
+  @apply hover:shadow-lg transition-shadow duration-200;
+}
+
+/* Badge styles */
+.badge-primary {
+  @apply bg-primary text-white;
+}
+
+.badge-success {
+  @apply bg-green-100 text-green-800;
+}
+
+.badge-warning {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.badge-error {
+  @apply bg-red-100 text-red-800;
+}
+
+/* Table styles */
+.data-table {
+  @apply w-full border-collapse;
+}
+
+.data-table th {
+  @apply text-left py-3 px-4 font-medium text-slate-500 border-b border-slate-200;
+}
+
+.data-table td {
+  @apply py-3 px-4 border-b border-slate-200;
+}
+
+.data-table tr:hover {
+  @apply bg-slate-50;
+}
+
+/* Empty state styles */
+.empty-state {
+  @apply text-center py-12;
+}
+
+.empty-state-icon {
+  @apply h-12 w-12 text-slate-400 mx-auto mb-4;
+}
+
+.empty-state-title {
+  @apply text-lg font-medium text-slate-900 mb-2;
+}
+
+.empty-state-description {
+  @apply text-slate-500 mb-4;
+}
+
+/* Progress bars */
+.progress-bar {
+  @apply w-full bg-slate-200 rounded-full h-2;
+}
+
+.progress-fill {
+  @apply h-2 rounded-full transition-all duration-300;
+}
+
+/* Utility classes for email marketing specific needs */
+.metric-positive {
+  @apply text-green-600;
+}
+
+.metric-negative {
+  @apply text-red-600;
+}
+
+.metric-neutral {
+  @apply text-slate-600;
+}
