@@ -2,7 +2,17 @@
 
 A comprehensive email marketing platform that enables users to create, send, and track email campaigns with professional features. Built with React, Express.js, PostgreSQL, and integrated with PowerMTA for enterprise-grade email delivery.
 
-## 🚀 Features
+## � Quick Installation
+
+### One-Command Installation for CentOS 10
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/thomasjaj/EmailFlow1/main/install-centos10.sh | sudo bash
+```
+
+**[📖 Full Installation Guide](INSTALLATION_GUIDE.md)** - Includes troubleshooting, SSL setup, and advanced configuration
+
+## �🚀 Features
 
 ### Campaign Management
 - Create and manage email campaigns
