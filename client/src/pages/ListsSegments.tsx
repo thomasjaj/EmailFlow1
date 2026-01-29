@@ -8,14 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { insertContactListSchema, type ContactList, type InsertContactList } from "@shared/schema";
+import { type ContactList, type InsertContactList } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Users, Plus, Filter, Edit, Trash2, Mail, TrendingUp } from "lucide-react";
 
 export default function ListsSegments() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingList, setEditingList] = useState<ContactList | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -25,14 +26,14 @@ export default function ListsSegments() {
 
   const { data: contactStats } = useQuery<{
     activeContacts: number;
-    segments: number; 
+    segments: number;
     avgEngagement: string;
   }>({
     queryKey: ["/api/contacts/stats"],
   });
 
   const createListMutation = useMutation({
-    mutationFn: (data: InsertContactList) => apiRequest("/api/contact-lists", "POST", data),
+    mutationFn: (data: InsertContactList) => apiRequest("POST", "/api/contact-lists", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/contact-lists"] });
       setIsCreateDialogOpen(false);
@@ -40,18 +41,20 @@ export default function ListsSegments() {
         title: "Success",
         description: "Contact list created successfully",
       });
+      form.reset();
     },
     onError: (error: Error) => {
+      console.error("Error creating list:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to create list",
         variant: "destructive",
       });
     },
   });
 
   const deleteListMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/contact-lists/${id}`, "DELETE"),
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/contact-lists/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/contact-lists"] });
       toast({
@@ -68,8 +71,31 @@ export default function ListsSegments() {
     },
   });
 
+  const updateListMutation = useMutation({
+    mutationFn: (data: { id: number; name: string; description?: string }) => 
+      apiRequest("PUT", `/api/contact-lists/${data.id}`, {
+        name: data.name,
+        description: data.description || ""
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/contact-lists"] });
+      setIsEditDialogOpen(false);
+      setEditingList(null);
+      toast({
+        title: "Success",
+        description: "Contact list updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update list",
+        variant: "destructive",
+      });
+    },
+  });
+
   const form = useForm<InsertContactList>({
-    resolver: zodResolver(insertContactListSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -77,10 +103,19 @@ export default function ListsSegments() {
   });
 
   const onSubmit = (data: InsertContactList) => {
+    console.log("Form submitted with data:", data);
+    if (!data.name || data.name.trim() === "") {
+      toast({
+        title: "Validation Error",
+        description: "List name is required",
+        variant: "destructive",
+      });
+      return;
+    }
     createListMutation.mutate(data);
   };
 
-  const handleDeleteList = (id: string) => {
+  const handleDeleteList = (id: number) => {
     if (confirm("Are you sure you want to delete this list? This action cannot be undone.")) {
       deleteListMutation.mutate(id);
     }
@@ -172,7 +207,7 @@ export default function ListsSegments() {
               <Users className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Total Lists</p>
-                <p className="text-2xl font-bold">{contactLists.length}</p>
+                <p className="text-2xl font-bold">{contactLists?.length || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -183,7 +218,7 @@ export default function ListsSegments() {
               <Mail className="h-8 w-8 text-green-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Active Contacts</p>
-                <p className="text-2xl font-bold">{contactStats.activeContacts || 0}</p>
+                <p className="text-2xl font-bold">{contactStats?.activeContacts || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -194,7 +229,7 @@ export default function ListsSegments() {
               <Filter className="h-8 w-8 text-purple-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Segments</p>
-                <p className="text-2xl font-bold">{contactStats.segments || 0}</p>
+                <p className="text-2xl font-bold">{contactStats?.segments || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -205,7 +240,7 @@ export default function ListsSegments() {
               <TrendingUp className="h-8 w-8 text-orange-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Avg. Engagement</p>
-                <p className="text-2xl font-bold">{contactStats.avgEngagement || "0%"}</p>
+                <p className="text-2xl font-bold">{contactStats?.avgEngagement || "0%"}</p>
               </div>
             </div>
           </CardContent>
@@ -215,7 +250,7 @@ export default function ListsSegments() {
       {/* Contact Lists */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Your Contact Lists</h2>
-        {contactLists.length === 0 ? (
+        {!contactLists || contactLists.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -242,7 +277,14 @@ export default function ListsSegments() {
                       )}
                     </div>
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setEditingList(list);
+                          setIsEditDialogOpen(true);
+                        }}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
@@ -260,7 +302,6 @@ export default function ListsSegments() {
                   <div className="flex justify-between items-center">
                     <div className="flex space-x-4">
                       <Badge variant="secondary">
-                        {/* This will be populated once we add contact counts */}
                         0 contacts
                       </Badge>
                       <Badge variant="outline">
@@ -282,6 +323,70 @@ export default function ListsSegments() {
           </div>
         )}
       </div>
+
+      {/* Edit List Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Contact List</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="edit-list-name" className="block text-sm font-medium mb-2">
+                List Name *
+              </label>
+              <Input
+                id="edit-list-name"
+                placeholder="e.g., Newsletter Subscribers"
+                value={editingList?.name || ""}
+                onChange={(e) =>
+                  setEditingList(editingList ? { ...editingList, name: e.target.value } : null)
+                }
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="edit-list-description" className="block text-sm font-medium mb-2">
+                Description
+              </label>
+              <Textarea
+                id="edit-list-description"
+                placeholder="Describe this contact list..."
+                value={editingList?.description || ""}
+                onChange={(e) =>
+                  setEditingList(editingList ? { ...editingList, description: e.target.value } : null)
+                }
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setEditingList(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (editingList && editingList.name.trim()) {
+                    updateListMutation.mutate({
+                      id: editingList.id,
+                      name: editingList.name,
+                      description: editingList.description,
+                    });
+                  }
+                }}
+                disabled={!editingList?.name || updateListMutation.isPending}
+              >
+                {updateListMutation.isPending ? "Updating..." : "Update List"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

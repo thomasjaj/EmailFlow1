@@ -37,11 +37,11 @@ export default function ClickTracking() {
   const [dateRange, setDateRange] = useState("30");
 
   const { data: clickData = [], isLoading } = useQuery<ClickData[]>({
-    queryKey: ["/api/analytics/click-tracking", selectedCampaign, dateRange],
+    queryKey: [`/api/analytics/click-tracking/${selectedCampaign}/${dateRange}`],
   });
 
   const { data: clickEvents = [] } = useQuery<ClickEvent[]>({
-    queryKey: ["/api/analytics/click-events", selectedCampaign, dateRange, searchTerm],
+    queryKey: [`/api/analytics/click-events/${selectedCampaign}/${dateRange}/${searchTerm || ''}`],
   });
 
   const { data: campaigns = [] } = useQuery({
@@ -57,7 +57,7 @@ export default function ClickTracking() {
     avgClickRate: "0%",
     topLink: null
   } } = useQuery({
-    queryKey: ["/api/analytics/click-stats", dateRange],
+    queryKey: [`/api/analytics/click-stats/${dateRange}`],
   });
 
   const filteredClickData = clickData.filter((click) =>

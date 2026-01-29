@@ -6,6 +6,7 @@ import {
   emailTemplates,
   campaigns,
   suppressionList,
+  domains,
   type User,
   type UpsertUser,
   type SmtpServer,
@@ -20,6 +21,8 @@ import {
   type InsertCampaign,
   type Suppression,
   type InsertSuppression,
+  type Domain,
+  type InsertDomain,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count } from "drizzle-orm";
@@ -76,6 +79,13 @@ export interface IStorage {
   addToSuppression(suppression: InsertSuppression): Promise<Suppression>;
   removeFromSuppression(email: string, userId: number): Promise<boolean>;
   isEmailSuppressed(email: string, userId: number): Promise<boolean>;
+
+  // Domain operations
+  getDomains(userId: number): Promise<Domain[]>;
+  getDomain(id: number, userId: number): Promise<Domain | undefined>;
+  createDomain(domain: InsertDomain): Promise<Domain>;
+  updateDomain(id: number, domain: Partial<InsertDomain>, userId: number): Promise<Domain | undefined>;
+  deleteDomain(id: number, userId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -313,6 +323,38 @@ export class DatabaseStorage implements IStorage {
   async isEmailSuppressed(email: string, userId: number): Promise<boolean> {
     const [suppressed] = await db.select().from(suppressionList).where(and(eq(suppressionList.email, email), eq(suppressionList.userId, userId)));
     return !!suppressed;
+  }
+
+  // Domain operations
+  async getDomains(userId: number): Promise<Domain[]> {
+    return await db.select().from(domains).where(eq(domains.userId, userId)).orderBy(desc(domains.createdAt));
+  }
+
+  async getDomain(id: number, userId: number): Promise<Domain | undefined> {
+    const [domain] = await db.select().from(domains).where(and(eq(domains.id, id), eq(domains.userId, userId)));
+    return domain;
+  }
+
+  async createDomain(domainData: InsertDomain): Promise<Domain> {
+    const [newDomain] = await db.insert(domains).values(domainData).returning();
+    return newDomain;
+  }
+
+  async updateDomain(id: number, domainData: Partial<InsertDomain>, userId: number): Promise<Domain | undefined> {
+    const [updated] = await db
+      .update(domains)
+      .set({
+        ...domainData,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(domains.id, id), eq(domains.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteDomain(id: number, userId: number): Promise<boolean> {
+    const result = await db.delete(domains).where(and(eq(domains.id, id), eq(domains.userId, userId)));
+    return result.rowCount > 0;
   }
 }
 

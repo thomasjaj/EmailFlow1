@@ -31,7 +31,7 @@ export default function Suppressions() {
   });
 
   const addSuppressionMutation = useMutation({
-    mutationFn: (data: InsertSuppression) => apiRequest("/api/suppressions", "POST", data),
+    mutationFn: (data: InsertSuppression) => apiRequest("POST", "/api/suppressions", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/suppressions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/suppressions/stats"] });
@@ -51,7 +51,7 @@ export default function Suppressions() {
   });
 
   const removeSuppressionMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/suppressions/${id}`, "DELETE"),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/suppressions/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/suppressions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/suppressions/stats"] });
@@ -70,7 +70,6 @@ export default function Suppressions() {
   });
 
   const form = useForm<InsertSuppression>({
-    resolver: zodResolver(insertSuppressionSchema),
     defaultValues: {
       email: "",
       reason: "unsubscribe",

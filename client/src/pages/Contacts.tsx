@@ -61,6 +61,8 @@ export default function Contacts() {
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddList, setShowAddList] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showEditContact, setShowEditContact] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
 
   const [newContact, setNewContact] = useState({
     email: "",
@@ -76,7 +78,7 @@ export default function Contacts() {
 
   // Fetch contacts
   const { data: contactsData, isLoading: contactsLoading } = useQuery<ContactsResponse>({
-    queryKey: ['/api/contacts', { listId: selectedList !== 'all' ? selectedList : undefined }],
+    queryKey: ['/api/contacts'],
   });
 
   // Fetch contact lists
@@ -114,6 +116,58 @@ export default function Contacts() {
       }
       toast({
         title: "Error adding contact",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete contact mutation
+  const deleteContactMutation = useMutation({
+    mutationFn: async (contactId: number) => {
+      const response = await apiRequest('DELETE', `/api/contacts/${contactId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      toast({
+        title: "Contact deleted successfully",
+        description: "The contact has been removed from your list.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error deleting contact",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update contact mutation
+  const updateContactMutation = useMutation({
+    mutationFn: async (contact: { id: number; email: string; firstName?: string; lastName?: string }) => {
+      const response = await apiRequest('PUT', `/api/contacts/${contact.id}`, {
+        email: contact.email,
+        firstName: contact.firstName || "",
+        lastName: contact.lastName || "",
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      setShowEditContact(false);
+      setEditingContact(null);
+      toast({
+        title: "Contact updated successfully",
+        description: "The contact has been updated.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error updating contact",
         description: "Please try again later.",
         variant: "destructive",
       });
@@ -217,6 +271,12 @@ export default function Contacts() {
       setSelectedContacts(filteredContacts.map(c => c.id));
     } else {
       setSelectedContacts([]);
+    }
+  };
+
+  const handleDeleteContact = (contactId: number) => {
+    if (confirm("Are you sure you want to delete this contact?")) {
+      deleteContactMutation.mutate(contactId);
     }
   };
 
@@ -554,10 +614,23 @@ export default function Contacts() {
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              setEditingContact(contact);
+                              setShowEditContact(true);
+                            }}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 text-red-600"
+                            onClick={() => handleDeleteContact(contact.id)}
+                          >
                             <Trash className="h-4 w-4" />
                           </Button>
                         </div>
@@ -586,6 +659,86 @@ export default function Contacts() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Contact Dialog */}
+      <Dialog open={showEditContact} onOpenChange={setShowEditContact}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Contact</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="edit-email" className="block text-sm font-medium mb-2">
+                Email Address *
+              </label>
+              <Input
+                id="edit-email"
+                type="email"
+                placeholder="contact@example.com"
+                value={editingContact?.email || ""}
+                onChange={(e) =>
+                  setEditingContact(editingContact ? { ...editingContact, email: e.target.value } : null)
+                }
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="edit-firstName" className="block text-sm font-medium mb-2">
+                  First Name
+                </label>
+                <Input
+                  id="edit-firstName"
+                  placeholder="John"
+                  value={editingContact?.firstName || ""}
+                  onChange={(e) =>
+                    setEditingContact(editingContact ? { ...editingContact, firstName: e.target.value } : null)
+                  }
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-lastName" className="block text-sm font-medium mb-2">
+                  Last Name
+                </label>
+                <Input
+                  id="edit-lastName"
+                  placeholder="Doe"
+                  value={editingContact?.lastName || ""}
+                  onChange={(e) =>
+                    setEditingContact(editingContact ? { ...editingContact, lastName: e.target.value } : null)
+                  }
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEditContact(false);
+                  setEditingContact(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (editingContact) {
+                    updateContactMutation.mutate({
+                      id: editingContact.id,
+                      email: editingContact.email,
+                      firstName: editingContact.firstName,
+                      lastName: editingContact.lastName,
+                    });
+                  }
+                }}
+                disabled={!editingContact?.email || updateContactMutation.isPending}
+              >
+                {updateContactMutation.isPending ? "Updating..." : "Update Contact"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

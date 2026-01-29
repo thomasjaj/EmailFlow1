@@ -127,6 +127,23 @@ export const suppressionList = pgTable("suppression_list", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Domains table
+export const domains = pgTable("domains", {
+  id: serial("id").primaryKey(),
+  domain: varchar("domain", { length: 255 }).notNull().unique(),
+  verified: boolean("verified").default(false),
+  spfRecord: varchar("spf_record", { length: 500 }),
+  spfValid: boolean("spf_valid").default(false),
+  dkimRecord: varchar("dkim_record", { length: 500 }),
+  dkimValid: boolean("dkim_valid").default(false),
+  dmarcRecord: varchar("dmarc_record", { length: 500 }),
+  dmarcValid: boolean("dmarc_valid").default(false),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  lastChecked: timestamp("last_checked"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Basic Types without zod dependencies
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -136,6 +153,7 @@ export type Contact = typeof contacts.$inferSelect;
 export type EmailTemplate = typeof emailTemplates.$inferSelect;
 export type Campaign = typeof campaigns.$inferSelect;
 export type Suppression = typeof suppressionList.$inferSelect;
+export type Domain = typeof domains.$inferSelect;
 
 export type InsertSmtpServer = typeof smtpServers.$inferInsert;
 export type InsertContactList = typeof contactLists.$inferInsert;
@@ -143,6 +161,7 @@ export type InsertContact = typeof contacts.$inferInsert;
 export type InsertEmailTemplate = typeof emailTemplates.$inferInsert;
 export type InsertCampaign = typeof campaigns.$inferInsert;
 export type InsertSuppression = typeof suppressionList.$inferInsert;
+export type InsertDomain = typeof domains.$inferInsert;
 
 // Simplified schemas for forms (mock objects that work with the frontend)
 export const insertSmtpServerSchema = {

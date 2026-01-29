@@ -48,7 +48,7 @@ export default function ImportContacts() {
       }, 500);
 
       try {
-        const result = await apiRequest("/api/contacts/import", "POST", formData, {
+        const result = await apiRequest("POST", "/api/contacts/import", formData, {
           headers: {
             // Don't set Content-Type, let the browser set it with boundary for FormData
           },

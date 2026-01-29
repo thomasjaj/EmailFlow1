@@ -52,7 +52,7 @@ export default function Deliverability() {
   const [selectedServer, setSelectedServer] = useState("all");
 
   const { data: deliverabilityStats } = useQuery<DeliverabilityStats>({
-    queryKey: ["/api/analytics/deliverability", dateRange, selectedServer],
+    queryKey: [`/api/analytics/deliverability/${dateRange}/${selectedServer}`],
   });
 
   const { data: serverHealth = [] } = useQuery<ServerHealth[]>({
@@ -64,7 +64,7 @@ export default function Deliverability() {
   });
 
   const { data: bounceAnalysis = [] } = useQuery({
-    queryKey: ["/api/analytics/bounce-analysis", dateRange],
+    queryKey: [`/api/analytics/bounce-analysis/${dateRange}`],
   });
 
   const getStatusIcon = (status: string) => {

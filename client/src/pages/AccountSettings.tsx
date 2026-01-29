@@ -61,7 +61,7 @@ export default function AccountSettings() {
   });
 
   const updateSettingsMutation = useMutation({
-    mutationFn: (data: Partial<UserSettings>) => apiRequest("/api/user/settings", "PUT", data),
+    mutationFn: (data: Partial<UserSettings>) => apiRequest("PUT", "/api/user/settings", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/settings"] });
       toast({
@@ -80,7 +80,7 @@ export default function AccountSettings() {
 
   const updateProfileMutation = useMutation({
     mutationFn: (data: { firstName?: string; lastName?: string }) => 
-      apiRequest("/api/user/profile", "PUT", data),
+      apiRequest("PUT", "/api/user/profile", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
@@ -98,7 +98,7 @@ export default function AccountSettings() {
   });
 
   const exportDataMutation = useMutation({
-    mutationFn: () => apiRequest("/api/user/export", "POST"),
+    mutationFn: () => apiRequest("POST", "/api/user/export"),
     onSuccess: (data: { downloadUrl: string }) => {
       window.open(data.downloadUrl, '_blank');
       toast({
@@ -116,7 +116,7 @@ export default function AccountSettings() {
   });
 
   const deleteAccountMutation = useMutation({
-    mutationFn: () => apiRequest("/api/user/account", "DELETE"),
+    mutationFn: () => apiRequest("DELETE", "/api/user/account"),
     onSuccess: () => {
       toast({
         title: "Account Deletion Initiated",

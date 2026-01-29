@@ -7,15 +7,42 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+const HTTP_METHODS = new Set([
+  "GET",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+  "OPTIONS",
+  "HEAD",
+]);
+
+function isHttpMethod(value: string) {
+  return HTTP_METHODS.has(value.toUpperCase());
+}
+
 export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
+  urlOrMethod: string,
+  methodOrUrl: string,
+  data?: unknown,
+  options?: RequestInit,
 ): Promise<Response> {
+  const hasMethodFirst = isHttpMethod(urlOrMethod);
+  const method = hasMethodFirst ? urlOrMethod : methodOrUrl;
+  const url = hasMethodFirst ? methodOrUrl : urlOrMethod;
+
+  const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
+  const defaultHeaders = data && !isFormData ? { "Content-Type": "application/json" } : {};
+  const headers = {
+    ...defaultHeaders,
+    ...(options?.headers ?? {}),
+  };
+
   const res = await fetch(url, {
+    ...options,
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    headers,
+    body: data ? (isFormData ? data : JSON.stringify(data)) : undefined,
     credentials: "include",
   });
 

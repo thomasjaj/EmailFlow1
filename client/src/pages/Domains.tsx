@@ -67,7 +67,7 @@ export default function Domains() {
   });
 
   const addDomainMutation = useMutation({
-    mutationFn: (data: { domain: string }) => apiRequest("/api/domains", "POST", data),
+    mutationFn: (data: { domain: string }) => apiRequest("POST", "/api/domains", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/domains"] });
       setIsAddDialogOpen(false);
@@ -86,7 +86,7 @@ export default function Domains() {
   });
 
   const verifyDomainMutation = useMutation({
-    mutationFn: (domainId: string) => apiRequest(`/api/domains/${domainId}/verify`, "POST"),
+    mutationFn: (domainId: string) => apiRequest("POST", `/api/domains/${domainId}/verify`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/domains"] });
       toast({
@@ -104,7 +104,7 @@ export default function Domains() {
   });
 
   const deleteDomainMutation = useMutation({
-    mutationFn: (domainId: string) => apiRequest(`/api/domains/${domainId}`, "DELETE"),
+    mutationFn: (domainId: string) => apiRequest("DELETE", `/api/domains/${domainId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/domains"] });
       toast({
