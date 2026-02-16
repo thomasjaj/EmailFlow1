@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import StatsCard from "@/components/StatsCard";
 import CampaignChart from "@/components/CampaignChart";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Mail, 
   Users, 
@@ -37,6 +38,7 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ['/api/dashboard/stats'],
@@ -48,6 +50,38 @@ export default function Dashboard() {
 
   const handleViewCampaigns = () => {
     setLocation('/campaigns');
+  };
+
+  const handleExport = () => {
+    if (!stats) {
+      toast({
+        title: "Export unavailable",
+        description: "No dashboard data to export yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const lines = [
+      "metric,value",
+      `totalCampaigns,${stats.totalCampaigns}`,
+      `averageOpenRate,${stats.averageOpenRate}`,
+      `averageClickRate,${stats.averageClickRate}`,
+      `totalContacts,${stats.totalContacts}`,
+      "",
+      "recentCampaignId,name,status,recipientCount,openCount,clickCount,createdAt",
+      ...(stats.recentCampaigns || []).map((c) =>
+        `${c.id},"${c.name}",${c.status},${c.recipientCount},${c.openCount},${c.clickCount},${c.createdAt}`
+      ),
+    ];
+
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "dashboard_export.csv";
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const getStatusColor = (status: string) => {
@@ -103,7 +137,7 @@ export default function Dashboard() {
           <p className="text-slate-600 mt-1">Welcome back! Here's what's happening with your email campaigns.</p>
         </div>
         <div className="flex space-x-3">
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button variant="outline" className="flex items-center gap-2" onClick={handleExport}>
             <Download className="h-4 w-4" />
             Export
           </Button>

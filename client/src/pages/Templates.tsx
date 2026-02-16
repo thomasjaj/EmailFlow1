@@ -95,6 +95,64 @@ export default function Templates() {
     },
   });
 
+  const updateTemplateMutation = useMutation({
+    mutationFn: async (templateData: EmailTemplate) => {
+      const payload = {
+        name: templateData.name,
+        subject: templateData.subject,
+        htmlContent: templateData.htmlContent,
+        textContent: templateData.textContent,
+        isDefault: templateData.isDefault,
+      };
+      const response = await apiRequest('PUT', `/api/templates/${templateData.id}`, payload);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
+      setEditingTemplate(null);
+      toast({
+        title: "Template updated",
+        description: "Your template changes have been saved.",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error updating template",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('DELETE', `/api/templates/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
+      toast({ title: "Template deleted" });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error deleting template",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateTemplate = () => {
     if (!newTemplate.name || !newTemplate.subject || !newTemplate.htmlContent) {
       toast({
@@ -117,6 +175,28 @@ export default function Templates() {
       isDefault: false,
     });
     setShowCreateTemplate(true);
+  };
+
+  const handleExportTemplates = () => {
+    if (!templates?.length) {
+      toast({
+        title: "Export unavailable",
+        description: "No templates to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const lines = [
+      "id,name,subject,isDefault,updatedAt",
+      ...templates.map((t) => `${t.id},"${t.name}","${t.subject}",${t.isDefault},${t.updatedAt}`),
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "templates_export.csv";
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const filteredTemplates = templates?.filter(template =>
@@ -151,7 +231,7 @@ export default function Templates() {
           <p className="text-slate-600 mt-1">Create and manage reusable email templates.</p>
         </div>
         <div className="flex space-x-3">
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button variant="outline" className="flex items-center gap-2" onClick={handleExportTemplates}>
             <Download className="h-4 w-4" />
             Export
           </Button>
@@ -344,7 +424,16 @@ export default function Templates() {
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" className="text-red-600">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600"
+                      onClick={() => {
+                        if (confirm(`Delete template ${template.name}?`)) {
+                          deleteTemplateMutation.mutate(template.id);
+                        }
+                      }}
+                    >
                       <Trash className="h-4 w-4" />
                     </Button>
                   </div>
@@ -388,6 +477,64 @@ export default function Templates() {
                 className="border rounded-lg p-4 bg-white min-h-[400px]"
                 dangerouslySetInnerHTML={{ __html: previewTemplate.htmlContent }}
               />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingTemplate} onOpenChange={() => setEditingTemplate(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Template</DialogTitle>
+          </DialogHeader>
+          {editingTemplate && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="editTemplateName">Template Name*</Label>
+                  <Input
+                    id="editTemplateName"
+                    value={editingTemplate.name}
+                    onChange={(e) => setEditingTemplate(prev => prev ? ({ ...prev, name: e.target.value }) : null)}
+                    placeholder="Enter template name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editTemplateSubject">Subject Line*</Label>
+                  <Input
+                    id="editTemplateSubject"
+                    value={editingTemplate.subject}
+                    onChange={(e) => setEditingTemplate(prev => prev ? ({ ...prev, subject: e.target.value }) : null)}
+                    placeholder="Enter email subject"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label>Email Content*</Label>
+                <div className="mt-2">
+                  <EmailTemplateBuilder
+                    value={editingTemplate.htmlContent}
+                    onChange={(html, text) => setEditingTemplate(prev => prev ? ({
+                      ...prev,
+                      htmlContent: html,
+                      textContent: text || ''
+                    }) : null)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2">
+                <Button variant="outline" onClick={() => setEditingTemplate(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => editingTemplate && updateTemplateMutation.mutate(editingTemplate)}
+                  disabled={updateTemplateMutation.isPending}
+                >
+                  {updateTemplateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>

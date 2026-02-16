@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -39,6 +40,14 @@ interface SmtpServer {
   status: string;
 }
 
+interface EmailTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  htmlContent: string;
+  textContent?: string;
+}
+
 export default function CreateCampaign() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -51,6 +60,7 @@ export default function CreateCampaign() {
     fromEmail: "",
     htmlContent: "",
     textContent: "",
+    templateId: "",
     recipientLists: [] as string[],
     smtpServerId: "",
     scheduledAt: "",
@@ -61,6 +71,9 @@ export default function CreateCampaign() {
     trackBounces: false,
     enableAbTesting: false,
   });
+  const [showTestDialog, setShowTestDialog] = useState(false);
+  const [testEmail, setTestEmail] = useState("");
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
 
   // Fetch contact lists
   const { data: contactLists } = useQuery<ContactList[]>({
@@ -70,6 +83,11 @@ export default function CreateCampaign() {
   // Fetch SMTP servers
   const { data: smtpServers } = useQuery<SmtpServer[]>({
     queryKey: ['/api/smtp-servers'],
+  });
+
+  // Fetch templates
+  const { data: templates } = useQuery<EmailTemplate[]>({
+    queryKey: ['/api/templates'],
   });
 
   // Create campaign mutation
@@ -107,6 +125,80 @@ export default function CreateCampaign() {
     },
   });
 
+  const updateCampaignMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('PUT', `/api/campaigns/${editingCampaignId}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      toast({
+        title: "Campaign updated successfully",
+        description: "Your changes have been saved.",
+      });
+      setLocation('/campaigns');
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error updating campaign",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendTestEmailMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/campaigns/test-email', {
+        smtpServerId: campaignData.smtpServerId,
+        toEmail: testEmail,
+        fromName: campaignData.fromName,
+        fromEmail: campaignData.fromEmail,
+        subject: campaignData.subject,
+        htmlContent: campaignData.htmlContent,
+        textContent: campaignData.textContent,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Test email sent",
+        description: "Check your inbox for the test message.",
+      });
+      setShowTestDialog(false);
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Test email failed",
+        description: error?.message || "Please check your SMTP settings and try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (isDraft: boolean = false) => {
     if (!campaignData.name || !campaignData.subject || !campaignData.htmlContent) {
       toast({
@@ -132,7 +224,11 @@ export default function CreateCampaign() {
       scheduledAt: campaignData.sendImmediately ? null : campaignData.scheduledAt || null,
     };
 
-    createCampaignMutation.mutate(payload);
+    if (editingCampaignId) {
+      updateCampaignMutation.mutate(payload);
+    } else {
+      createCampaignMutation.mutate(payload);
+    }
   };
 
   const handleListSelection = (listId: string, checked: boolean) => {
@@ -153,6 +249,79 @@ export default function CreateCampaign() {
     setLocation('/campaigns');
   };
 
+  const handleOpenTestDialog = () => {
+    if (!campaignData.smtpServerId || !campaignData.fromEmail || !campaignData.subject || !campaignData.htmlContent) {
+      toast({
+        title: "Missing required fields",
+        description: "Select an SMTP server and fill in From Email, Subject, and Content first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShowTestDialog(true);
+  };
+
+  const handleSendTestEmail = () => {
+    if (!testEmail) {
+      toast({
+        title: "Test email required",
+        description: "Enter a recipient email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+    sendTestEmailMutation.mutate();
+  };
+
+  const handleTemplateSelect = (templateId: string) => {
+    setCampaignData((prev) => ({ ...prev, templateId }));
+    const template = templates?.find((item) => item.id === templateId);
+    if (!template) return;
+    setCampaignData((prev) => ({
+      ...prev,
+      subject: template.subject || prev.subject,
+      htmlContent: template.htmlContent || prev.htmlContent,
+      textContent: template.textContent || prev.textContent,
+    }));
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const campaignId = params.get('edit');
+    if (!campaignId) return;
+
+    setEditingCampaignId(campaignId);
+    apiRequest('GET', `/api/campaigns/${campaignId}`)
+      .then((res) => res.json())
+      .then((campaign) => {
+        setCampaignData({
+          name: campaign.name || "",
+          subject: campaign.subject || "",
+          fromName: campaign.fromName || "",
+          fromEmail: campaign.fromEmail || "",
+          htmlContent: campaign.htmlContent || "",
+          textContent: campaign.textContent || "",
+          templateId: campaign.templateId ? String(campaign.templateId) : "",
+          recipientLists: [],
+          smtpServerId: campaign.smtpServerId ? String(campaign.smtpServerId) : "",
+          scheduledAt: campaign.scheduledAt ? campaign.scheduledAt.slice(0, 16) : "",
+          sendImmediately: campaign.status !== "scheduled",
+          trackOpens: true,
+          trackClicks: true,
+          trackUnsubscribes: false,
+          trackBounces: false,
+          enableAbTesting: false,
+        });
+      })
+      .catch((error) => {
+        toast({
+          title: "Failed to load campaign",
+          description: error?.message || "Please try again.",
+          variant: "destructive",
+        });
+      });
+  }, [toast]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -168,20 +337,57 @@ export default function CreateCampaign() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => handleSubmit(true)} disabled={createCampaignMutation.isPending}>
+          <Button
+            variant="outline"
+            onClick={() => handleSubmit(true)}
+            disabled={createCampaignMutation.isPending || updateCampaignMutation.isPending}
+          >
             <Save className="h-4 w-4 mr-2" />
-            Save as Draft
+            {editingCampaignId ? "Update Draft" : "Save as Draft"}
           </Button>
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button variant="outline" className="flex items-center gap-2" onClick={handleOpenTestDialog}>
             <Eye className="h-4 w-4" />
             Preview & Test
           </Button>
-          <Button onClick={() => handleSubmit(false)} disabled={createCampaignMutation.isPending}>
+          <Button
+            onClick={() => handleSubmit(false)}
+            disabled={createCampaignMutation.isPending || updateCampaignMutation.isPending}
+          >
             <Send className="h-4 w-4 mr-2" />
-            {createCampaignMutation.isPending ? 'Creating...' : 'Create Campaign'}
+            {editingCampaignId
+              ? (updateCampaignMutation.isPending ? 'Updating...' : 'Update Campaign')
+              : (createCampaignMutation.isPending ? 'Creating...' : 'Create Campaign')}
           </Button>
         </div>
       </div>
+
+      <Dialog open={showTestDialog} onOpenChange={setShowTestDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Test Email</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="testEmail">Recipient Email</Label>
+              <Input
+                id="testEmail"
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowTestDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSendTestEmail} disabled={sendTestEmailMutation.isPending}>
+                {sendTestEmailMutation.isPending ? "Sending..." : "Send Test"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
@@ -318,6 +524,21 @@ export default function CreateCampaign() {
                   <CardTitle>Email Content</CardTitle>
                 </CardHeader>
                 <CardContent>
+                  <div className="mb-4">
+                    <Label htmlFor="templateSelect">Use Template</Label>
+                    <Select value={campaignData.templateId} onValueChange={handleTemplateSelect}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {templates?.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <EmailTemplateBuilder
                     value={campaignData.htmlContent}
                     onChange={(html, text) => setCampaignData(prev => ({ 

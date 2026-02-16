@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,17 @@ interface ImportResult {
   errors: string[];
 }
 
+interface ImportJob {
+  id: number;
+  status: "pending" | "processing" | "completed" | "failed";
+  processed: number;
+  successful: number;
+  failed: number;
+  bytesProcessed: number;
+  fileSize: number;
+  errorSample?: string | null;
+}
+
 export default function ImportContacts() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedListId, setSelectedListId] = useState<string>("");
@@ -29,6 +40,7 @@ export default function ImportContacts() {
   const [importProgress, setImportProgress] = useState(0);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [jobId, setJobId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -41,44 +53,19 @@ export default function ImportContacts() {
     mutationFn: async (formData: FormData) => {
       setIsImporting(true);
       setImportProgress(0);
-      
-      // Simulate progress updates
-      const progressInterval = setInterval(() => {
-        setImportProgress(prev => Math.min(prev + 10, 90));
-      }, 500);
-
-      try {
-        const result = await apiRequest("POST", "/api/contacts/import", formData, {
-          headers: {
-            // Don't set Content-Type, let the browser set it with boundary for FormData
-          },
-        });
-        clearInterval(progressInterval);
-        setImportProgress(100);
-        return result;
-      } catch (error) {
-        clearInterval(progressInterval);
-        throw error;
-      } finally {
-        setIsImporting(false);
-      }
-    },
-    onSuccess: (result: ImportResult) => {
-      setImportResult(result);
-      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/contact-lists"] });
-      toast({
-        title: "Import Completed",
-        description: `Successfully imported ${result.successful} contacts`,
+      const response = await apiRequest("POST", "/api/contacts/import", formData, {
+        headers: {
+          // Don't set Content-Type, let the browser set it with boundary for FormData
+        },
       });
-      // Reset form
-      setSelectedFile(null);
-      setSelectedListId("");
-      setCreateNewList(false);
-      setNewListName("");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      return response.json() as Promise<{ jobId: number }>;
+    },
+    onSuccess: (result: { jobId: number }) => {
+      setJobId(result.jobId);
+      toast({
+        title: "Import Started",
+        description: "Your import is processing in the background.",
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -89,6 +76,63 @@ export default function ImportContacts() {
       setIsImporting(false);
     },
   });
+
+  const { data: importJob } = useQuery<ImportJob>({
+    queryKey: jobId ? [`/api/contacts/import/${jobId}`] : ["/api/contacts/import/none"],
+    enabled: jobId !== null,
+    refetchInterval: (data) =>
+      data && (data.status === "processing" || data.status === "pending") ? 2000 : false,
+  });
+
+  useEffect(() => {
+    if (!importJob || importJob.fileSize <= 0) {
+      return;
+    }
+    const percent = Math.min(100, Math.round((importJob.bytesProcessed / importJob.fileSize) * 100));
+    setImportProgress(percent);
+  }, [importJob]);
+
+  useEffect(() => {
+    if (!importJob || !isImporting) {
+      return;
+    }
+    if (importJob.status !== "completed" && importJob.status !== "failed") {
+      return;
+    }
+
+    setIsImporting(false);
+    queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/contact-lists"] });
+
+    if (importJob.status === "completed") {
+      setImportResult({
+        total: importJob.processed,
+        successful: importJob.successful,
+        failed: importJob.failed,
+        duplicates: 0,
+        errors: importJob.errorSample ? [importJob.errorSample] : [],
+      });
+      toast({
+        title: "Import Completed",
+        description: `Successfully imported ${importJob.successful} contacts`,
+      });
+    } else {
+      toast({
+        title: "Import Failed",
+        description: importJob.errorSample || "Please try again later.",
+        variant: "destructive",
+      });
+    }
+
+    setSelectedFile(null);
+    setSelectedListId("");
+    setCreateNewList(false);
+    setNewListName("");
+    setJobId(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [importJob, isImporting, queryClient, toast]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -181,8 +225,8 @@ export default function ImportContacts() {
                 <li>Required column: <code className="bg-muted px-1 rounded">email</code></li>
                 <li>Optional columns: <code className="bg-muted px-1 rounded">first_name</code>, <code className="bg-muted px-1 rounded">last_name</code>, <code className="bg-muted px-1 rounded">tags</code></li>
                 <li>For multiple tags, separate with commas and wrap in quotes: "tag1,tag2,tag3"</li>
-                <li>Maximum file size: 10MB</li>
-                <li>Maximum contacts per import: 50,000</li>
+                <li>Maximum file size: 1GB</li>
+                <li>Recommended: split files larger than 10 million rows</li>
               </ul>
             </div>
             <Button variant="outline" onClick={downloadTemplate}>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ interface DomainReputation {
 }
 
 export default function Deliverability() {
+  const { toast } = useToast();
   const [dateRange, setDateRange] = useState("30");
   const [selectedServer, setSelectedServer] = useState("all");
 
@@ -105,6 +107,41 @@ export default function Deliverability() {
     trend: 'stable' as const
   };
 
+  const handleExportReport = () => {
+    const lines = [
+      "metric,value",
+      `deliveryRate,${stats.deliveryRate}`,
+      `bounceRate,${stats.bounceRate}`,
+      `complaintRate,${stats.complaintRate}`,
+      `inboxPlacement,${stats.inboxPlacement}`,
+      `spamPlacement,${stats.spamPlacement}`,
+      `reputationScore,${stats.reputationScore}`,
+      "",
+      "serverHealth,name,status,deliveryRate,bounceRate,lastCheck",
+      ...serverHealth.map((s) => `${s.name},${s.status},${s.deliveryRate},${s.bounceRate},${s.lastCheck}`),
+      "",
+      "domainReputation,domain,reputation,score,blacklisted,lastChecked",
+      ...domainReputations.map((d) => `${d.domain},${d.reputation},${d.score},${d.blacklisted},${d.lastChecked}`),
+    ];
+
+    if (lines.length <= 3) {
+      toast({
+        title: "Export unavailable",
+        description: "No deliverability data to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "deliverability_report.csv";
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -125,7 +162,7 @@ export default function Deliverability() {
               <SelectItem value="90">Last 90 days</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExportReport}>
             <Download className="h-4 w-4 mr-2" />
             Export Report
           </Button>

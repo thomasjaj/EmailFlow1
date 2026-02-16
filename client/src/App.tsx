@@ -20,6 +20,7 @@ import ClickTracking from "@/pages/ClickTracking";
 import Deliverability from "@/pages/Deliverability";
 import Domains from "@/pages/Domains";
 import AccountSettings from "@/pages/AccountSettings";
+import AdminUsers from "@/pages/AdminUsers";
 import Layout from "@/components/Layout";
 
 function Router() {
@@ -53,6 +54,7 @@ function Router() {
           <Route path="/servers" component={Servers} />
           <Route path="/domains" component={Domains} />
           <Route path="/account-settings" component={AccountSettings} />
+          <Route path="/admin/users" component={AdminUsers} />
         </Layout>
       )}
       <Route component={NotFound} />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { 
@@ -52,6 +53,7 @@ interface ContactsResponse {
 }
 
 export default function Contacts() {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,6 +63,10 @@ export default function Contacts() {
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddList, setShowAddList] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showAddToList, setShowAddToList] = useState(false);
+  const [assignListId, setAssignListId] = useState("all");
+  const [moveFromCurrentList, setMoveFromCurrentList] = useState(false);
+  const [addContactListId, setAddContactListId] = useState("all");
   const [showEditContact, setShowEditContact] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
 
@@ -76,9 +82,13 @@ export default function Contacts() {
     description: "",
   });
 
+  const contactsQueryKey = selectedList === "all"
+    ? "/api/contacts"
+    : `/api/contacts?listId=${selectedList}`;
+
   // Fetch contacts
   const { data: contactsData, isLoading: contactsLoading } = useQuery<ContactsResponse>({
-    queryKey: ['/api/contacts'],
+    queryKey: [contactsQueryKey],
   });
 
   // Fetch contact lists
@@ -93,10 +103,12 @@ export default function Contacts() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      queryClient.invalidateQueries({ queryKey: [contactsQueryKey] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contact-lists'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       setShowAddContact(false);
       setNewContact({ email: "", firstName: "", lastName: "", tags: "" });
+      setAddContactListId("all");
       toast({
         title: "Contact added successfully",
         description: "The contact has been added to your list.",
@@ -129,7 +141,7 @@ export default function Contacts() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      queryClient.invalidateQueries({ queryKey: [contactsQueryKey] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       toast({
         title: "Contact deleted successfully",
@@ -156,7 +168,7 @@ export default function Contacts() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      queryClient.invalidateQueries({ queryKey: [contactsQueryKey] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       setShowEditContact(false);
       setEditingContact(null);
@@ -168,6 +180,37 @@ export default function Contacts() {
     onError: (error) => {
       toast({
         title: "Error updating contact",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addToListMutation = useMutation({
+    mutationFn: async ({ listId, contactIds, removeFromListId }: { listId: string; contactIds: string[]; removeFromListId?: string }) => {
+      if (removeFromListId) {
+        await apiRequest('DELETE', `/api/contact-lists/${removeFromListId}/contacts`, {
+          contactIds,
+        });
+      }
+      const response = await apiRequest('POST', `/api/contact-lists/${listId}/contacts`, {
+        contactIds,
+      });
+      return response.json();
+    },
+    onSuccess: (data: { addedCount: number }) => {
+      queryClient.invalidateQueries({ queryKey: [contactsQueryKey] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contact-lists'] });
+      setShowAddToList(false);
+      setSelectedContacts([]);
+      toast({
+        title: "Contacts updated",
+        description: `${data.addedCount} contact(s) assigned.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Add to list failed",
         description: "Please try again later.",
         variant: "destructive",
       });
@@ -222,6 +265,7 @@ export default function Contacts() {
     const contactData = {
       ...newContact,
       tags: newContact.tags ? newContact.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
+      listId: addContactListId !== "all" ? addContactListId : undefined,
     };
 
     createContactMutation.mutate(contactData);
@@ -280,6 +324,81 @@ export default function Contacts() {
     }
   };
 
+  const handleExport = (contacts: Contact[], filename: string) => {
+    if (!contacts.length) {
+      toast({
+        title: "Export unavailable",
+        description: "No contacts to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const lines = [
+      "email,firstName,lastName,status,createdAt",
+      ...contacts.map((c) =>
+        `"${c.email}","${c.firstName || ''}","${c.lastName || ''}",${c.status},${c.createdAt}`
+      ),
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleExportSelected = () => {
+    const selected = filteredContacts.filter((c) => selectedContacts.includes(c.id));
+    handleExport(selected, "contacts_selected.csv");
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!selectedContacts.length) return;
+    if (!confirm(`Delete ${selectedContacts.length} selected contacts?`)) return;
+
+    await Promise.all(
+      selectedContacts.map((id) => apiRequest('DELETE', `/api/contacts/${id}`))
+    );
+    queryClient.invalidateQueries({ queryKey: [contactsQueryKey] });
+    setSelectedContacts([]);
+    toast({ title: "Contacts deleted" });
+  };
+
+  const handleAddToList = () => {
+    if (!selectedContacts.length) return;
+    setAssignListId(contactLists?.[0]?.id || "all");
+    setMoveFromCurrentList(selectedList !== "all");
+    setShowAddToList(true);
+  };
+
+  const handleConfirmAddToList = () => {
+    if (assignListId === "all") {
+      toast({
+        title: "Select a list",
+        description: "Please choose a list to add contacts to.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const removeFromListId = moveFromCurrentList && selectedList !== "all" ? selectedList : undefined;
+    addToListMutation.mutate({ listId: assignListId, contactIds: selectedContacts, removeFromListId });
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const listId = params.get('listId');
+    if (listId) {
+      setSelectedList(listId);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedList !== "all") {
+      setAddContactListId(selectedList);
+    }
+  }, [selectedList]);
+
   if (contactsLoading || listsLoading) {
     return (
       <div className="space-y-6">
@@ -311,7 +430,11 @@ export default function Contacts() {
           <p className="text-slate-600 mt-1">Manage your subscriber lists and contacts.</p>
         </div>
         <div className="flex space-x-3">
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => handleExport(filteredContacts, "contacts_export.csv")}
+          >
             <Download className="h-4 w-4" />
             Export
           </Button>
@@ -334,7 +457,15 @@ export default function Contacts() {
                     Upload a CSV file with columns: email, firstName, lastName, tags
                   </p>
                 </div>
-                <Button className="w-full">Import Contacts</Button>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    setShowImport(false);
+                    setLocation('/contacts/import');
+                  }}
+                >
+                  Go to Import
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -386,6 +517,22 @@ export default function Contacts() {
                 <DialogTitle>Add Contact</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
+                <div>
+                  <Label htmlFor="contactList">Add to List</Label>
+                  <Select value={addContactListId} onValueChange={setAddContactListId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select list" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">No list</SelectItem>
+                      {contactLists?.map((list) => (
+                        <SelectItem key={list.id} value={list.id}>
+                          {list.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div>
                   <Label htmlFor="email">Email Address*</Label>
                   <Input
@@ -521,13 +668,13 @@ export default function Contacts() {
                 {selectedContacts.length} contact{selectedContacts.length !== 1 ? 's' : ''} selected
               </span>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={handleAddToList}>
                   Add to List
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={handleExportSelected}>
                   Export Selected
                 </Button>
-                <Button variant="destructive" size="sm">
+                <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
                   Delete Selected
                 </Button>
               </div>
@@ -734,6 +881,51 @@ export default function Contacts() {
                 disabled={!editingContact?.email || updateContactMutation.isPending}
               >
                 {updateContactMutation.isPending ? "Updating..." : "Update Contact"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAddToList} onOpenChange={setShowAddToList}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Contacts to List</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="assignList">Select List</Label>
+              <Select value={assignListId} onValueChange={setAssignListId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select list" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contactLists?.map((list) => (
+                    <SelectItem key={list.id} value={list.id}>
+                      {list.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedList !== "all" && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="move-from-list"
+                  checked={moveFromCurrentList}
+                  onCheckedChange={(checked) => setMoveFromCurrentList(checked === true)}
+                />
+                <label htmlFor="move-from-list" className="text-sm">
+                  Move from current list (remove from this list)
+                </label>
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowAddToList(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmAddToList} disabled={addToListMutation.isPending}>
+                {addToListMutation.isPending ? "Adding..." : "Add to List"}
               </Button>
             </div>
           </div>

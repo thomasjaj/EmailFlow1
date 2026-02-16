@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +49,7 @@ interface AccountStats {
 
 export default function AccountSettings() {
   const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -98,7 +100,10 @@ export default function AccountSettings() {
   });
 
   const exportDataMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/user/export"),
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/user/export");
+      return response.json() as Promise<{ downloadUrl: string }>;
+    },
     onSuccess: (data: { downloadUrl: string }) => {
       window.open(data.downloadUrl, '_blank');
       toast({
@@ -156,6 +161,24 @@ export default function AccountSettings() {
     }
   };
 
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handlePhotoSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    setTimeout(() => {
+      setIsUploading(false);
+      toast({
+        title: "Upload not configured",
+        description: "Profile photo uploads are not enabled yet.",
+        variant: "destructive",
+      });
+    }, 300);
+  };
+
   const defaultSettings: UserSettings = {
     emailNotifications: true,
     campaignReminders: true,
@@ -187,6 +210,25 @@ export default function AccountSettings() {
         </p>
       </div>
 
+      {user?.role === "admin" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Admin Tools</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-4">
+            <div>
+              <div className="font-medium">User Approvals</div>
+              <div className="text-sm text-muted-foreground">
+                Review and approve new user requests.
+              </div>
+            </div>
+            <Button asChild>
+              <Link href="/admin/users">Open</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="profile">Profile</TabsTrigger>
@@ -214,7 +256,14 @@ export default function AccountSettings() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <Button variant="outline" disabled={isUploading}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoSelected}
+                  />
+                  <Button variant="outline" disabled={isUploading} onClick={handlePhotoClick}>
                     <Upload className="h-4 w-4 mr-2" />
                     {isUploading ? "Uploading..." : "Change Photo"}
                   </Button>
@@ -454,8 +503,8 @@ export default function AccountSettings() {
               <Alert>
                 <Shield className="h-4 w-4" />
                 <AlertDescription>
-                  Your account is secured through Replit authentication. 
-                  For additional security options, please visit your Replit account settings.
+                  Your account is secured through EmailPro login credentials.
+                  Use a strong password and keep it private.
                 </AlertDescription>
               </Alert>
               
@@ -464,7 +513,7 @@ export default function AccountSettings() {
                 <div className="mt-2 p-3 bg-muted rounded-lg">
                   <p className="font-medium">{user?.email}</p>
                   <p className="text-sm text-muted-foreground">
-                    Authenticated via Replit
+                    Authenticated via EmailPro
                   </p>
                 </div>
               </div>

@@ -16,6 +16,7 @@ import {
   ArrowDownRight
 } from "lucide-react";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Campaign {
   id: string;
@@ -44,6 +45,7 @@ interface DashboardStats {
 }
 
 export default function Analytics() {
+  const { toast } = useToast();
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
   const [timeRange, setTimeRange] = useState("30");
 
@@ -81,6 +83,35 @@ export default function Analytics() {
     }))
     .sort((a, b) => b.openRate - a.openRate)
     .slice(0, 5);
+
+  const handleExportReport = () => {
+    if (!campaigns.length) {
+      toast({
+        title: "Export unavailable",
+        description: "No campaign data to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const lines = [
+      "metric,value",
+      `totalSent,${totalSent}`,
+      `overallOpenRate,${overallOpenRate.toFixed(2)}`,
+      `overallClickRate,${overallClickRate.toFixed(2)}`,
+      `overallBounceRate,${overallBounceRate.toFixed(2)}`,
+      `overallUnsubscribeRate,${overallUnsubscribeRate.toFixed(2)}`,
+      "",
+      "topCampaigns,name,openRate,clickRate",
+      ...topCampaigns.map((c) => `${c.name},${c.openRate.toFixed(2)},${c.clickRate.toFixed(2)}`),
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "analytics_report.csv";
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   if (campaignsLoading || statsLoading) {
     return (
@@ -127,7 +158,7 @@ export default function Analytics() {
               <SelectItem value="365">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button variant="outline" className="flex items-center gap-2" onClick={handleExportReport}>
             <Download className="h-4 w-4" />
             Export Report
           </Button>

@@ -10,6 +10,7 @@ import {
   boolean,
   serial,
   pgEnum,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 
 // Session storage table
@@ -30,6 +31,10 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  passwordHash: varchar("password_hash", { length: 255 }),
+  passwordSalt: varchar("password_salt", { length: 255 }),
+  role: varchar("role", { length: 50 }).default("user"),
+  isApproved: boolean("is_approved").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -79,6 +84,21 @@ export const contacts = pgTable("contacts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Contact List Memberships
+export const contactListMembers = pgTable(
+  "contact_list_members",
+  {
+    listId: integer("list_id").notNull().references(() => contactLists.id, { onDelete: 'cascade' }),
+    contactId: integer("contact_id").notNull().references(() => contacts.id, { onDelete: 'cascade' }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.listId, table.contactId] }),
+    index("IDX_contact_list_members_user").on(table.userId),
+  ],
+);
+
 // Email Templates
 export const emailTemplates = pgTable("email_templates", {
   id: serial("id").primaryKey(),
@@ -127,6 +147,34 @@ export const suppressionList = pgTable("suppression_list", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Notifications
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  type: varchar("type", { length: 50 }).notNull(),
+  message: text("message").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Contact import jobs
+export const importJobs = pgTable("import_jobs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  listId: integer("list_id").references(() => contactLists.id, { onDelete: 'set null' }),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  filePath: text("file_path").notNull(),
+  fileSize: integer("file_size").default(0),
+  bytesProcessed: integer("bytes_processed").default(0),
+  status: varchar("status", { length: 30 }).default("pending"),
+  processed: integer("processed").default(0),
+  successful: integer("successful").default(0),
+  failed: integer("failed").default(0),
+  errorSample: text("error_sample"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Domains table
 export const domains = pgTable("domains", {
   id: serial("id").primaryKey(),
@@ -150,18 +198,24 @@ export type User = typeof users.$inferSelect;
 export type SmtpServer = typeof smtpServers.$inferSelect;
 export type ContactList = typeof contactLists.$inferSelect;
 export type Contact = typeof contacts.$inferSelect;
+export type ContactListMember = typeof contactListMembers.$inferSelect;
 export type EmailTemplate = typeof emailTemplates.$inferSelect;
 export type Campaign = typeof campaigns.$inferSelect;
 export type Suppression = typeof suppressionList.$inferSelect;
 export type Domain = typeof domains.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
+export type ImportJob = typeof importJobs.$inferSelect;
 
 export type InsertSmtpServer = typeof smtpServers.$inferInsert;
 export type InsertContactList = typeof contactLists.$inferInsert;
 export type InsertContact = typeof contacts.$inferInsert;
+export type InsertContactListMember = typeof contactListMembers.$inferInsert;
 export type InsertEmailTemplate = typeof emailTemplates.$inferInsert;
 export type InsertCampaign = typeof campaigns.$inferInsert;
 export type InsertSuppression = typeof suppressionList.$inferInsert;
 export type InsertDomain = typeof domains.$inferInsert;
+export type InsertNotification = typeof notifications.$inferInsert;
+export type InsertImportJob = typeof importJobs.$inferInsert;
 
 // Simplified schemas for forms (mock objects that work with the frontend)
 export const insertSmtpServerSchema = {

@@ -44,6 +44,7 @@ export default function Servers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddServer, setShowAddServer] = useState(false);
   const [editingServer, setEditingServer] = useState<SmtpServer | null>(null);
+  const [testingServerId, setTestingServerId] = useState<string | null>(null);
 
   const [newServer, setNewServer] = useState({
     name: "",
@@ -170,11 +171,46 @@ export default function Servers() {
     },
   });
 
+  const testServerMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('POST', `/api/smtp-servers/${id}/test`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/smtp-servers'] });
+      toast({
+        title: "SMTP test successful",
+        description: "The server connection and authentication are working.",
+      });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "SMTP test failed",
+        description: error?.message || "Please check the server settings and try again.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setTestingServerId(null);
+    },
+  });
+
   const handleCreateServer = () => {
-    if (!newServer.name || !newServer.host || !newServer.username || !newServer.password) {
+    if (!newServer.name || !newServer.host) {
       toast({
         title: "Missing required fields",
-        description: "Please fill in all required server information.",
+        description: "Please fill in the server name and host.",
         variant: "destructive",
       });
       return;
@@ -185,10 +221,20 @@ export default function Servers() {
 
   const handleUpdateServer = () => {
     if (!editingServer) return;
+    const payload = {
+      name: editingServer.name,
+      host: editingServer.host,
+      port: editingServer.port,
+      username: editingServer.username,
+      password: editingServer.password,
+      encryption: editingServer.encryption,
+      maxEmailsPerHour: editingServer.maxEmailsPerHour,
+      status: editingServer.status,
+    };
 
     updateServerMutation.mutate({
       id: editingServer.id,
-      data: editingServer,
+      data: payload,
     });
   };
 
@@ -196,6 +242,11 @@ export default function Servers() {
     if (confirm("Are you sure you want to delete this SMTP server? This action cannot be undone.")) {
       deleteServerMutation.mutate(id);
     }
+  };
+
+  const handleTestServer = (id: string) => {
+    setTestingServerId(id);
+    testServerMutation.mutate(id);
   };
 
   const getStatusColor = (status: string) => {
@@ -311,22 +362,22 @@ export default function Servers() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="username">Username*</Label>
+                  <Label htmlFor="username">Username</Label>
                   <Input
                     id="username"
                     value={newServer.username}
                     onChange={(e) => setNewServer(prev => ({ ...prev, username: e.target.value }))}
-                    placeholder="your-username"
+                    placeholder="leave blank for IP-auth"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="password">Password*</Label>
+                  <Label htmlFor="password">Password</Label>
                   <Input
                     id="password"
                     type="password"
                     value={newServer.password}
                     onChange={(e) => setNewServer(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="your-password"
+                    placeholder="leave blank for IP-auth"
                   />
                 </div>
               </div>
@@ -455,9 +506,15 @@ export default function Servers() {
                   </div>
                   
                   <div className="flex items-center gap-2 pt-2 border-t">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleTestServer(server.id)}
+                      disabled={testingServerId === server.id}
+                    >
                       <TestTube className="h-4 w-4 mr-1" />
-                      Test
+                      {testingServerId === server.id ? "Testing..." : "Test"}
                     </Button>
                     <Button 
                       variant="outline" 
@@ -560,22 +617,22 @@ export default function Servers() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="editUsername">Username*</Label>
+                  <Label htmlFor="editUsername">Username</Label>
                   <Input
                     id="editUsername"
                     value={editingServer.username}
                     onChange={(e) => setEditingServer(prev => prev ? ({ ...prev, username: e.target.value }) : null)}
-                    placeholder="your-username"
+                    placeholder="leave blank for IP-auth"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="editPassword">Password*</Label>
+                  <Label htmlFor="editPassword">Password</Label>
                   <Input
                     id="editPassword"
                     type="password"
                     value={editingServer.password}
                     onChange={(e) => setEditingServer(prev => prev ? ({ ...prev, password: e.target.value }) : null)}
-                    placeholder="your-password"
+                    placeholder="leave blank for IP-auth"
                   />
                 </div>
               </div>

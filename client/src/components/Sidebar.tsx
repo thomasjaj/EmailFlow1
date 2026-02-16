@@ -1,5 +1,7 @@
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   BarChart3, 
   Mail, 
@@ -12,106 +14,128 @@ import {
   Ban,
   MousePointer,
   Shield,
-  Settings
+  Settings,
+  UserCheck
 } from "lucide-react";
 
-const navigation = [
-  {
-    name: "Dashboard",
-    href: "/",
-    icon: BarChart3,
-  },
-  {
-    category: "Campaigns",
-    items: [
-      {
-        name: "All Campaigns",
-        href: "/campaigns",
-        icon: Mail,
-        badge: "24",
-      },
-      {
-        name: "Create Campaign",
-        href: "/campaigns/create",
-        icon: Plus,
-      },
-      {
-        name: "Templates",
-        href: "/templates",
-        icon: FileText,
-      },
-    ],
-  },
-  {
-    category: "Contacts",
-    items: [
-      {
-        name: "All Contacts",
-        href: "/contacts",
-        icon: Users,
-        badge: "12,543",
-      },
-      {
-        name: "Lists & Segments",
-        href: "/lists-segments",
-        icon: List,
-      },
-      {
-        name: "Import Contacts",
-        href: "/import-contacts",
-        icon: Upload,
-      },
-      {
-        name: "Suppressions",
-        href: "/suppressions",
-        icon: Ban,
-      },
-    ],
-  },
-  {
-    category: "Analytics",
-    items: [
-      {
-        name: "Reports",
-        href: "/analytics",
-        icon: BarChart3,
-      },
-      {
-        name: "Click Tracking",
-        href: "/click-tracking",
-        icon: MousePointer,
-      },
-      {
-        name: "Deliverability",
-        href: "/deliverability",
-        icon: Shield,
-      },
-    ],
-  },
-  {
-    category: "Settings",
-    items: [
-      {
-        name: "SMTP Servers",
-        href: "/servers",
-        icon: Server,
-      },
-      {
-        name: "Domains",
-        href: "/domains",
-        icon: Shield,
-      },
-      {
-        name: "Account Settings",
-        href: "/account-settings",
-        icon: Settings,
-      },
-    ],
-  },
-];
+type DashboardStats = {
+  totalCampaigns: number;
+  totalContacts: number;
+};
 
 export default function Sidebar() {
   const [location] = useLocation();
+  const { user } = useAuth();
+  const { data: stats } = useQuery<DashboardStats>({
+    queryKey: ["/api/dashboard/stats"],
+  });
+
+  const campaignCount = stats?.totalCampaigns ?? 0;
+  const contactCount = stats?.totalContacts ?? 0;
+
+  const navigation = [
+    {
+      name: "Dashboard",
+      href: "/",
+      icon: BarChart3,
+    },
+    {
+      category: "Campaigns",
+      items: [
+        {
+          name: "All Campaigns",
+          href: "/campaigns",
+          icon: Mail,
+          badge: campaignCount.toLocaleString(),
+        },
+        {
+          name: "Create Campaign",
+          href: "/campaigns/create",
+          icon: Plus,
+        },
+        {
+          name: "Templates",
+          href: "/templates",
+          icon: FileText,
+        },
+      ],
+    },
+    {
+      category: "Contacts",
+      items: [
+        {
+          name: "All Contacts",
+          href: "/contacts",
+          icon: Users,
+          badge: contactCount.toLocaleString(),
+        },
+        {
+          name: "Lists & Segments",
+          href: "/lists-segments",
+          icon: List,
+        },
+        {
+          name: "Import Contacts",
+          href: "/import-contacts",
+          icon: Upload,
+        },
+        {
+          name: "Suppressions",
+          href: "/suppressions",
+          icon: Ban,
+        },
+      ],
+    },
+    {
+      category: "Analytics",
+      items: [
+        {
+          name: "Reports",
+          href: "/analytics",
+          icon: BarChart3,
+        },
+        {
+          name: "Click Tracking",
+          href: "/click-tracking",
+          icon: MousePointer,
+        },
+        {
+          name: "Deliverability",
+          href: "/deliverability",
+          icon: Shield,
+        },
+      ],
+    },
+    {
+      category: "Settings",
+      items: [
+        {
+          name: "SMTP Servers",
+          href: "/servers",
+          icon: Server,
+        },
+        {
+          name: "Domains",
+          href: "/domains",
+          icon: Shield,
+        },
+        {
+          name: "Account Settings",
+          href: "/account-settings",
+          icon: Settings,
+        },
+        ...(user?.role === "admin"
+          ? [
+              {
+                name: "User Approvals",
+                href: "/admin/users",
+                icon: UserCheck,
+              },
+            ]
+          : []),
+      ],
+    },
+  ];
 
   return (
     <aside className="w-60 bg-white border-r border-slate-200 h-screen fixed left-0 overflow-y-auto">

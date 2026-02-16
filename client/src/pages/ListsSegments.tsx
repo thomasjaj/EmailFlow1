@@ -12,15 +12,17 @@ import { type ContactList, type InsertContactList } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Users, Plus, Filter, Edit, Trash2, Mail, TrendingUp } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function ListsSegments() {
+  const [, setLocation] = useLocation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingList, setEditingList] = useState<ContactList | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: contactLists = [], isLoading } = useQuery<ContactList[]>({
+  const { data: contactLists = [], isLoading } = useQuery<(ContactList & { contactCount?: number })[]>({
     queryKey: ["/api/contact-lists"],
   });
 
@@ -302,17 +304,21 @@ export default function ListsSegments() {
                   <div className="flex justify-between items-center">
                     <div className="flex space-x-4">
                       <Badge variant="secondary">
-                        0 contacts
+                        {(list.contactCount ?? 0).toLocaleString()} contacts
                       </Badge>
                       <Badge variant="outline">
                         Created {list.createdAt ? new Date(list.createdAt).toLocaleDateString() : "Unknown"}
                       </Badge>
                     </div>
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setLocation(`/contacts?listId=${list.id}`)}
+                      >
                         View Contacts
                       </Button>
-                      <Button size="sm">
+                      <Button size="sm" onClick={() => setLocation('/campaigns/create')}>
                         Create Campaign
                       </Button>
                     </div>

@@ -1,4 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
@@ -13,9 +16,17 @@ import { Mail, Search, Bell, ChevronDown, User, LogOut } from "lucide-react";
 
 export default function TopNavigation() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { data: notificationData } = useQuery<{ count: number }>({
+    queryKey: ["/api/notifications/unread-count"],
+    enabled: !!user,
+  });
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
+  const unreadCount = notificationData?.count ?? 0;
+
+  const handleLogout = async () => {
+    await apiRequest("POST", "/api/auth/logout");
+    window.location.href = "/";
   };
 
   return (
@@ -49,7 +60,9 @@ export default function TopNavigation() {
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="sm" className="relative">
             <Bell className="h-5 w-5 text-slate-600" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            )}
           </Button>
           
           <DropdownMenu>
@@ -80,11 +93,11 @@ export default function TopNavigation() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation("/account-settings")}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation("/account-settings")}>
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

@@ -1,10 +1,66 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Mail, BarChart3, Users, Server, Shield, Zap } from "lucide-react";
 
 export default function Landing() {
-  const handleLogin = () => {
-    window.location.href = "/api/login";
+  const { toast } = useToast();
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!email || !password) {
+      toast({
+        title: "Missing info",
+        description: "Email and password are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (mode === "signup" && password !== confirmPassword) {
+      toast({
+        title: "Passwords do not match",
+        description: "Please confirm your password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const path = mode === "login" ? "/api/auth/login" : "/api/auth/signup";
+      await apiRequest("POST", path, { email, password });
+      if (mode === "login") {
+        window.location.href = "/";
+      } else {
+        toast({
+          title: "Account created",
+          description: "Your account is pending approval. You will be able to sign in once approved.",
+        });
+        setMode("login");
+        setPassword("");
+        setConfirmPassword("");
+      }
+    } catch (error: any) {
+      const message = error?.message || "Please try again.";
+      const pendingApproval = message.includes("Account pending approval");
+      toast({
+        title: mode === "login" ? "Login failed" : "Signup failed",
+        description: pendingApproval
+          ? "Your account is pending approval. Please contact the administrator."
+          : message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -19,40 +75,86 @@ export default function Landing() {
               </div>
               <span className="text-xl font-semibold text-slate-900">EmailPro</span>
             </div>
-            <Button onClick={handleLogin} className="bg-primary hover:bg-blue-600">
-              Sign In
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button onClick={() => setMode("login")} variant={mode === "login" ? "default" : "outline"}>
+                Sign In
+              </Button>
+              <Button onClick={() => setMode("signup")} variant={mode === "signup" ? "default" : "outline"}>
+                Create Account
+              </Button>
+            </div>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center">
-          <h1 className="text-4xl md:text-6xl font-bold text-slate-900 mb-6">
-            Professional Email Marketing
-            <span className="text-primary block">Made Simple</span>
-          </h1>
-          <p className="text-xl text-slate-600 mb-8 max-w-3xl mx-auto">
-            Create, send, and track email campaigns with our comprehensive platform. 
-            Multi-server delivery, advanced analytics, and powerful automation tools.
-          </p>
-          <div className="space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
-            <Button 
-              size="lg" 
-              onClick={handleLogin}
-              className="w-full sm:w-auto bg-primary hover:bg-blue-600 text-lg px-8 py-3"
-            >
-              Get Started Free
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline"
-              className="w-full sm:w-auto text-lg px-8 py-3"
-            >
-              View Demo
-            </Button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+          <div className="text-center lg:text-left">
+            <h1 className="text-4xl md:text-6xl font-bold text-slate-900 mb-6">
+              Professional Email Marketing
+              <span className="text-primary block">Made Simple</span>
+            </h1>
+            <p className="text-xl text-slate-600 mb-8 max-w-3xl">
+              Create, send, and track email campaigns with our comprehensive platform.
+              Multi-server delivery, advanced analytics, and powerful automation tools.
+            </p>
           </div>
+          <Card className="border-slate-200 shadow-lg">
+            <CardHeader>
+              <CardTitle>{mode === "login" ? "Sign In" : "Create Account"}</CardTitle>
+              <CardDescription>
+                {mode === "login"
+                  ? "Access your EmailPro dashboard."
+                  : "Create your account to request access."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  autoComplete="email"
+                />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                />
+                {mode === "signup" && (
+                  <Input
+                    type="password"
+                    placeholder="Confirm password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    autoComplete="new-password"
+                  />
+                )}
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting
+                    ? "Please wait..."
+                    : mode === "login"
+                    ? "Sign In"
+                    : "Create Account"}
+                </Button>
+                <div className="text-sm text-slate-600 text-center">
+                  {mode === "login" ? (
+                    <button type="button" className="text-primary" onClick={() => setMode("signup")}>
+                      New here? Create an account
+                    </button>
+                  ) : (
+                    <button type="button" className="text-primary" onClick={() => setMode("login")}>
+                      Already have an account? Sign in
+                    </button>
+                  )}
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
@@ -151,9 +253,9 @@ export default function Landing() {
           <p className="text-xl text-blue-100 mb-8">
             Join thousands of businesses using EmailPro to reach their audience effectively.
           </p>
-          <Button 
-            size="lg" 
-            onClick={handleLogin}
+          <Button
+            size="lg"
+            onClick={() => setMode("signup")}
             variant="secondary"
             className="text-lg px-8 py-3"
           >

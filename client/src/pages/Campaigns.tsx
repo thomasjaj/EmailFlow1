@@ -1,8 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   Plus, 
   Search, 
@@ -13,9 +17,10 @@ import {
   Eye,
   Copy,
   Edit,
+  Send,
+  Pause,
+  Square,
   Trash,
-  Play,
-  Pause
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
@@ -25,6 +30,11 @@ interface Campaign {
   id: string;
   name: string;
   subject: string;
+  fromName?: string;
+  fromEmail?: string;
+  htmlContent?: string;
+  textContent?: string;
+  smtpServerId?: string | number | null;
   status: string;
   recipientCount: number;
   sentCount: number;
@@ -44,15 +54,196 @@ interface CampaignsResponse {
 
 export default function Campaigns() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [previewCampaign, setPreviewCampaign] = useState<Campaign | null>(null);
 
   const { data: campaignsData, isLoading } = useQuery<CampaignsResponse>({
     queryKey: ['/api/campaigns'],
   });
 
+  const deleteCampaignMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('DELETE', `/api/campaigns/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/campaigns'] });
+      toast({ title: "Campaign deleted" });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Delete failed",
+        description: error?.message || "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendCampaignMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('POST', `/api/campaigns/${id}/send`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/campaigns'] });
+      toast({ title: "Campaign sending" });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Send failed",
+        description: error?.message || "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const pauseCampaignMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('POST', `/api/campaigns/${id}/pause`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/campaigns'] });
+      toast({ title: "Campaign paused" });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Pause failed",
+        description: error?.message || "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const stopCampaignMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('POST', `/api/campaigns/${id}/stop`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/campaigns'] });
+      toast({ title: "Campaign stopped" });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Stop failed",
+        description: error?.message || "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const duplicateCampaignMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('GET', `/api/campaigns/${id}`);
+      const campaign = await response.json();
+      const payload = {
+        name: `${campaign.name} (Copy)`,
+        subject: campaign.subject,
+        fromName: campaign.fromName,
+        fromEmail: campaign.fromEmail,
+        htmlContent: campaign.htmlContent,
+        textContent: campaign.textContent,
+        smtpServerId: campaign.smtpServerId,
+        status: "draft",
+      };
+      const create = await apiRequest('POST', '/api/campaigns', payload);
+      return create.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/campaigns'] });
+      toast({ title: "Campaign duplicated" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Duplicate failed",
+        description: error?.message || "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateCampaign = () => {
     setLocation('/campaigns/create');
+  };
+
+  const handleExport = () => {
+    if (!campaignsData?.campaigns?.length) {
+      toast({
+        title: "Export unavailable",
+        description: "No campaigns to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const lines = [
+      "id,name,subject,status,recipients,createdAt",
+      ...campaignsData.campaigns.map((c) =>
+        `${c.id},"${c.name}","${c.subject}",${c.status},${c.recipientCount},${c.createdAt}`
+      ),
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "campaigns_export.csv";
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+
+  const handleDeleteCampaign = (id: string) => {
+    if (confirm("Are you sure you want to delete this campaign?")) {
+      deleteCampaignMutation.mutate(id);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -111,7 +302,7 @@ export default function Campaigns() {
           <p className="text-slate-600 mt-1">Manage your email campaigns and track their performance.</p>
         </div>
         <div className="flex space-x-3">
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button variant="outline" className="flex items-center gap-2" onClick={handleExport}>
             <Download className="h-4 w-4" />
             Export
           </Button>
@@ -214,11 +405,19 @@ export default function Campaigns() {
                     <th className="text-left py-3 px-4 font-medium text-slate-500">Open Rate</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-500">Click Rate</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-500">Date</th>
-                    <th className="text-right py-3 px-4 font-medium text-slate-500">Actions</th>
+                    <th className="text-right py-3 px-4 font-medium text-slate-500 min-w-[360px]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCampaigns.map((campaign) => (
+                  {filteredCampaigns.map((campaign) => {
+                    const canSend = ['draft', 'paused', 'scheduled'].includes(campaign.status);
+                    const canPause = ['sending'].includes(campaign.status);
+                    const canStop = ['sending', 'scheduled'].includes(campaign.status);
+                    const isSendDisabled = !canSend || sendCampaignMutation.isPending;
+                    const isPauseDisabled = !canPause || pauseCampaignMutation.isPending;
+                    const isStopDisabled = !canStop || stopCampaignMutation.isPending;
+
+                    return (
                     <tr key={campaign.id} className="border-b hover:bg-slate-50">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
@@ -253,36 +452,76 @@ export default function Campaigns() {
                          campaign.scheduledAt ? format(new Date(campaign.scheduledAt), 'MMM d, yyyy') :
                          format(new Date(campaign.createdAt), 'MMM d, yyyy')}
                       </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <td className="py-3 px-4 text-right min-w-[360px]">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => setPreviewCampaign(campaign)}
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => duplicateCampaignMutation.mutate(campaign.id)}
+                          >
                             <Copy className="h-4 w-4" />
                           </Button>
-                          {campaign.status === 'draft' && (
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {campaign.status === 'scheduled' && (
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <Pause className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {campaign.status === 'paused' && (
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <Play className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-8 w-8 p-0 ${isSendDisabled ? 'opacity-50' : ''}`}
+                            onClick={() => {
+                              if (isSendDisabled) return;
+                              sendCampaignMutation.mutate(campaign.id);
+                            }}
+                            aria-disabled={isSendDisabled}
+                            title="Send"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-8 w-8 p-0 ${isPauseDisabled ? 'opacity-50' : ''}`}
+                            onClick={() => {
+                              if (isPauseDisabled) return;
+                              pauseCampaignMutation.mutate(campaign.id);
+                            }}
+                            aria-disabled={isPauseDisabled}
+                            title="Pause"
+                          >
+                            <Pause className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-8 w-8 p-0 ${isStopDisabled ? 'opacity-50' : ''}`}
+                            onClick={() => {
+                              if (isStopDisabled) return;
+                              stopCampaignMutation.mutate(campaign.id);
+                            }}
+                            aria-disabled={isStopDisabled}
+                            title="Stop"
+                          >
+                            <Square className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-red-600"
+                            onClick={() => handleDeleteCampaign(campaign.id)}
+                          >
                             <Trash className="h-4 w-4" />
                           </Button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -305,6 +544,31 @@ export default function Campaigns() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!previewCampaign} onOpenChange={() => setPreviewCampaign(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Campaign Preview</DialogTitle>
+          </DialogHeader>
+          {previewCampaign && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-slate-600">Name: {previewCampaign.name}</p>
+                <p className="text-sm text-slate-600">Subject: {previewCampaign.subject}</p>
+                <p className="text-sm text-slate-600">Status: {previewCampaign.status}</p>
+              </div>
+              {previewCampaign.htmlContent ? (
+                <div
+                  className="border rounded-lg p-4 bg-white"
+                  dangerouslySetInnerHTML={{ __html: previewCampaign.htmlContent }}
+                />
+              ) : (
+                <p className="text-sm text-slate-500">No HTML content available for preview.</p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
